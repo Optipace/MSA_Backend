@@ -22,7 +22,7 @@ public class CorsGlobalConfiguration {
 
         config.setAllowedOriginPatterns(List.of("*"));
 
-        config.setAllowedOrigins(List.of("https://sigc2frontend.com"));
+        config.setAllowedOrigins(List.of("https://stage4.optipacetech.com/seamora"));
 
         config.setAllowedHeaders(List.of("*"));
 
