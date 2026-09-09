@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="JpbDataSourceConfig">
+    <data-source-infos>
+      <data-source-info id="c9727e33-566b-49dd-82b0-29a7751f4922" persistence-unit-name="MSA" />
+      <data-source-info id="c9727e33-566b-49dd-82b0-29a7751f4922_security" persistence-unit-name="Security" />
+    </data-source-infos>
+  </component>
+</project>
