@@ -1,5 +1,6 @@
 package org.optipace.authService.repository;
 
+import org.optipace.authService.entity.EmployeeRole;
 import org.optipace.authService.entity.Role;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
