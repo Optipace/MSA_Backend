@@ -23,7 +23,7 @@ import java.util.Set;
 @NoArgsConstructor
 @Getter
 @Setter
-public class Shift {
+public class Shift { 
 
     @Id
     @Column(name = "shift_id", unique = true, nullable = false)
