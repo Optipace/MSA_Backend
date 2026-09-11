@@ -11,6 +11,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
+import java.util.Map;
+
 @RestController
 @RequestMapping("/v1/internal")
 @RequiredArgsConstructor
@@ -21,5 +24,10 @@ public class InternalAuthController {
     @PostMapping("/register-login")
     public ResponseEntity<SingleResponse<?>> registerEmployeeLogin(@Valid @RequestBody InternalRegisterLoginRequest request) {
         return ResponseEntity.ok(internalAuthService.registerEmployeeCredentials(request));
+    }
+
+    @PostMapping("/roles/batch")
+    SingleResponse<Map<Long, Long>> getRoleIdsForEmployees(@RequestBody List<Long> employeeIds) {
+        return internalAuthService.getRoleIdsForEmployees(employeeIds);
     }
 }

@@ -149,52 +149,52 @@
                             </annotationProcessorPaths>
                         </configuration>
                     </execution>
-                    <!--					<execution>-->
-                    <!--						<configuration>-->
-                    <!--							<ejb3>true</ejb3>-->
-                    <!--							<jdk5>true</jdk5>-->
-                    <!--							<propertyFile>src/main/resources/hibernate.properties</propertyFile>-->
+<!--                    					<execution>-->
+<!--                    						<configuration>-->
+<!--                    							<ejb3>true</ejb3>-->
+<!--                    							<jdk5>true</jdk5>-->
+<!--                    							<propertyFile>src/main/resources/hibernate.properties</propertyFile>-->
 
-                    <!--							&lt;!&ndash; Add this line right here &ndash;&gt;-->
-                    <!--							<revengFile>src/main/resources/hibernate.reveng.xml</revengFile>-->
+<!--                    							&lt;!&ndash; Add this line right here &ndash;&gt;-->
+<!--                    							<revengFile>src/main/resources/hibernate.reveng.xml</revengFile>-->
 
-                    <!--							<outputDirectory>src/main/java</outputDirectory>-->
-                    <!--							<packageName>org.optipace.authService.entity</packageName>-->
-                    <!--						</configuration>-->
-                    <!--					</execution>-->
+<!--                    							<outputDirectory>src/main/java</outputDirectory>-->
+<!--                    							<packageName>org.optipace.authService.entity</packageName>-->
+<!--                    						</configuration>-->
+<!--                    					</execution>-->
                 </executions>
             </plugin>
-            <!--			<plugin>-->
-            <!--				<groupId>org.hibernate.tool</groupId>-->
-            <!--				<artifactId>hibernate-tools-maven</artifactId>-->
-            <!--				<version>6.4.4.Final</version> &lt;!&ndash; Use a version compatible with your Hibernate/Spring Boot version &ndash;&gt;-->
-            <!--				<executions>-->
-            <!--					<execution>-->
-            <!--						<id>Generate JPA Entities</id>-->
-            <!--						<phase>generate-sources</phase>-->
-            <!--						<goals>-->
-            <!--							<goal>hbm2java</goal>-->
-            <!--						</goals>-->
-            <!--					</execution>-->
-            <!--				</executions>-->
-            <!--				<configuration>-->
-            <!--					<ejb3>true</ejb3>-->
-            <!--					<jdk5>true</jdk5>-->
-            <!--					&lt;!&ndash; This tells the plugin where to read the database connection from &ndash;&gt;-->
-            <!--					<propertyFile>src/main/resources/hibernate.properties</propertyFile>-->
-            <!--					&lt;!&ndash; This is where your generated entities will be saved &ndash;&gt;-->
-            <!--					<outputDirectory>src/main/java</outputDirectory>-->
-            <!--					<packageName>org.optipace.authService.entity</packageName>-->
-            <!--				</configuration>-->
-            <!--				<dependencies>-->
-            <!--					&lt;!&ndash; The plugin needs the PostgreSQL driver to read your schema &ndash;&gt;-->
-            <!--					<dependency>-->
-            <!--						<groupId>org.postgresql</groupId>-->
-            <!--						<artifactId>postgresql</artifactId>-->
-            <!--						<version>42.7.10</version>&lt;!&ndash; Match the version used by your Spring Boot &ndash;&gt;-->
-            <!--					</dependency>-->
-            <!--				</dependencies>-->
-            <!--			</plugin>-->
+<!--            			<plugin>-->
+<!--            				<groupId>org.hibernate.tool</groupId>-->
+<!--            				<artifactId>hibernate-tools-maven</artifactId>-->
+<!--            				<version>6.4.4.Final</version> &lt;!&ndash; Use a version compatible with your Hibernate/Spring Boot version &ndash;&gt;-->
+<!--            				<executions>-->
+<!--            					<execution>-->
+<!--            						<id>Generate JPA Entities</id>-->
+<!--            						<phase>generate-sources</phase>-->
+<!--            						<goals>-->
+<!--            							<goal>hbm2java</goal>-->
+<!--            						</goals>-->
+<!--            					</execution>-->
+<!--            				</executions>-->
+<!--            				<configuration>-->
+<!--            					<ejb3>true</ejb3>-->
+<!--            					<jdk5>true</jdk5>-->
+<!--            					&lt;!&ndash; This tells the plugin where to read the database connection from &ndash;&gt;-->
+<!--            					<propertyFile>src/main/resources/hibernate.properties</propertyFile>-->
+<!--            					&lt;!&ndash; This is where your generated entities will be saved &ndash;&gt;-->
+<!--            					<outputDirectory>src/main/java</outputDirectory>-->
+<!--            					<packageName>org.optipace.authService.entity</packageName>-->
+<!--            				</configuration>-->
+<!--            				<dependencies>-->
+<!--            					&lt;!&ndash; The plugin needs the PostgreSQL driver to read your schema &ndash;&gt;-->
+<!--            					<dependency>-->
+<!--            						<groupId>org.postgresql</groupId>-->
+<!--            						<artifactId>postgresql</artifactId>-->
+<!--            						<version>42.7.10</version>&lt;!&ndash; Match the version used by your Spring Boot &ndash;&gt;-->
+<!--            					</dependency>-->
+<!--            				</dependencies>-->
+<!--            			</plugin>-->
         </plugins>
     </build>
 

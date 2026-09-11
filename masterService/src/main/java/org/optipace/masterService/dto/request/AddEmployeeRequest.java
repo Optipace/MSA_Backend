@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.Setter;
 import java.math.BigDecimal;
 import java.sql.Date;
+import java.time.LocalDate;
 
 @Getter
 @Setter
@@ -30,11 +31,11 @@ public class AddEmployeeRequest {
     private String gender;
 
     @JsonFormat(pattern = "yyyy-MM-dd")
-    private Date dateOfBirth;
+    private LocalDate dateOfBirth;
 
     @NotNull(message = "Date of joining is required")
     @JsonFormat(pattern = "yyyy-MM-dd")
-    private Date dateOfJoining;
+    private LocalDate dateOfJoining;
 
     private String mobileNumber;
 

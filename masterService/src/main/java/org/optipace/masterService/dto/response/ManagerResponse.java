@@ -52,4 +52,6 @@ public class ManagerResponse {
     private Long designationId;
 
     private Long sectionId;
+
+    private Long roleId;
 }

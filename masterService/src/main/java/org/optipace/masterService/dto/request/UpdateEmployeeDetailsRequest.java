@@ -11,6 +11,7 @@ import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.sql.Date;
+import java.time.LocalDate;
 
 @Getter
 @Setter
@@ -34,10 +35,10 @@ public class UpdateEmployeeDetailsRequest {
     private String gender;
 
     @JsonFormat(pattern = "yyyy-MM-dd")
-    private Date dateOfBirth;
+    private LocalDate dateOfBirth;
 
     @JsonFormat(pattern = "yyyy-MM-dd")
-    private Date dateOfJoining;
+    private LocalDate dateOfJoining;
 
     @Pattern(regexp = "^\\d{10}$", message = "Mobile number must be exactly 10 digits")
     private String mobileNumber;
