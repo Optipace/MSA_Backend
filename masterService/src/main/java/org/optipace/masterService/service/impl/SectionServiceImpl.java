@@ -111,7 +111,6 @@ public class SectionServiceImpl implements SectionService {
         section.setCapacity(request.getCapacity());
         section.setRemarks(request.getRemarks());
         section.setRecordStatus(request.getRecordStatus());
-
         section.setUpdatedBy(Long.parseLong(adminId));
         sectionRepository.save(section);
 
@@ -122,7 +121,6 @@ public class SectionServiceImpl implements SectionService {
     public SingleResponse<SectionResponse> getSectionById(Long sectionId) {
         Section response = sectionRepository.findById(sectionId)
                 .orElseThrow(() -> new NotFoundException("Section not found with this id"));
-
         SectionResponse sectionResponse = modelMapper.map(response, SectionResponse.class);
         return new SingleResponse<>(sectionResponse, CustomStatus.SUCCESS);
     }
@@ -131,11 +129,9 @@ public class SectionServiceImpl implements SectionService {
     public SingleResponse<?> deleteSectionById(Long sectionId, String adminId) {
         Section section = sectionRepository.findById(sectionId)
                 .orElseThrow(() -> new NotFoundException("Section not found with this id"));
-
         section.setRecordStatus('D');
         section.setUpdatedBy(Long.parseLong(adminId));
         sectionRepository.save(section);
-
         return new SingleResponse<>("Section deleted successfully", CustomStatus.SUCCESS);
     }
 }
