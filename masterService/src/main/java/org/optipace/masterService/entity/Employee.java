@@ -12,6 +12,7 @@ import java.io.Serializable;
 import java.math.BigDecimal;
 import java.sql.Date;
 import java.sql.Timestamp;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
@@ -80,10 +81,10 @@ public class Employee {
     private Character gender;
 
     @Column(name = "date_of_birth", length = 13)
-    private Date dateOfBirth;
+    private LocalDate dateOfBirth;
 
     @Column(name = "date_of_joining", nullable = false, length = 13)
-    private Date dateOfJoining;
+    private LocalDate dateOfJoining;
 
     @Column(name = "mobile_number", length = 20)
     private String mobileNumber;
@@ -130,21 +131,6 @@ public class Employee {
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "employee")
     private Set<Employee> employees = new HashSet<Employee>(0);
 
-    public Employee(Long employeeId, Department department, Factory factory, Shift shift, Organization organization, Designation designation, Section section, String employeeCode, String firstName, Date dateOfJoining, LocalDateTime createdOn, int versionNo, char recordStatus) {
-        this.employeeId = employeeId;
-        this.department = department;
-        this.factory = factory;
-        this.shift = shift;
-        this.organization = organization;
-        this.designation = designation;
-        this.section = section;
-        this.employeeCode = employeeCode;
-        this.firstName = firstName;
-        this.dateOfJoining = dateOfJoining;
-        this.createdOn = createdOn;
-        this.versionNo = versionNo;
-        this.recordStatus = recordStatus;
-    }
 }
 
 
