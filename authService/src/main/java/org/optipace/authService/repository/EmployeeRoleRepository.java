@@ -9,4 +9,7 @@ import java.util.Optional;
 @Repository
 public interface EmployeeRoleRepository extends JpaRepository<EmployeeRole, Long> {
     Optional<EmployeeRole> findByEmployeeId(Long employeeId);
+
+    Optional<EmployeeRole> findByEmployeeIdAndIsPrimaryRoleTrue(Long employeeId);
+
 }

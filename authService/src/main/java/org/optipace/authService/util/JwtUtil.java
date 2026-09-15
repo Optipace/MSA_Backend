@@ -27,11 +27,11 @@ public class JwtUtil {
 
     private final EmployeeLoginRepository employeeLoginRepository;
 //    private final RefreshTokenRepository refreshTokenRepository;
-    @Value("${jwt.secret}")
+    @Value("${app.jwt.secret}")
     private String secret;
-    @Value("${jwt.expiration}")
+    @Value("${app.jwt.expiration-access}")
     private Long jwtExpiration;
-//    @Value("${jwt.refresh.expiration}")
+//    @Value("${app.jwt.expiration-refresh}")
 //    private Long refreshExpiration;
 
     public String generateToken(Long employeeId, String role) {

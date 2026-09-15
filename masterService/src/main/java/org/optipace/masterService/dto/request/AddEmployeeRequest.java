@@ -23,7 +23,7 @@ public class AddEmployeeRequest {
 
     private String lastName;
 
-    @NotBlank(message = "Biometric is required")
+//    @NotBlank(message = "Biometric is required")
     private String biometricId;
 
     @Pattern(regexp = "^[MFU]$", message = "Gender must be M, F, or U")

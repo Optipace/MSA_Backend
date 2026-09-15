@@ -12,6 +12,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/employee")
 @RequiredArgsConstructor
@@ -20,8 +22,8 @@ public class EmployeeController {
 
     @PostMapping("/v1/add")
     @PreAuthorize("hasAuthority('FACTORY_ADMIN')")
-    public ResponseEntity<SingleResponse<?>> createEmployee(@Valid @RequestBody AddEmployeeRequest request, @RequestHeader("X-User-Id") String adminId) {
-        return ResponseEntity.ok(employeeService.createEmployee(request, adminId));
+    public ResponseEntity<SingleResponse<?>> createEmployee(@Valid @RequestBody List<AddEmployeeRequest> requestList, @RequestHeader("X-User-Id") String adminId) {
+        return ResponseEntity.ok(employeeService.createEmployee(requestList, adminId));
     }
 
     @GetMapping("/v1/all")

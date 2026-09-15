@@ -11,7 +11,6 @@ import org.optipace.masterService.dto.request.EmployeeLoginDto;
 import org.optipace.masterService.dto.request.UpdateEmployeeDetailsRequest;
 import org.optipace.masterService.dto.response.*;
 import org.optipace.masterService.entity.Employee;
-import org.optipace.masterService.entity.Factory;
 import org.optipace.masterService.enums.CustomStatus;
 import org.optipace.masterService.exception.BadRequestException;
 import org.optipace.masterService.exception.MicroserviceException;
@@ -22,6 +21,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
@@ -45,132 +45,124 @@ public class EmployeeServiceImpl implements EmployeeService {
     private final ModelMapper modelMapper;
 
     @Override
-    public SingleResponse<?> createEmployee(AddEmployeeRequest request, String adminId) {
-        log.info("Initiating employee creation for code: {} by Admin: {}", request.getEmployeeCode(), adminId);
-        if (employeeRepository.existsByEmployeeCode(request.getEmployeeCode())) {
-            log.warn("Creation failed: Employee code {} already exists", request.getEmployeeCode());
-            throw new BadRequestException("Employee code already exists");
-        }
-        if (employeeRepository.existsByEmail(request.getEmail())) {
-            log.warn("Creation failed: Email {} already exists", request.getEmail());
-            throw new BadRequestException("Email already exists");
-        }
+    public SingleResponse<?> createEmployee(List<AddEmployeeRequest> requestList, String adminId) {
+        log.info("Initiating batch employee creation for {} records by Admin: {}", requestList.size(), adminId);
 
-        Employee employee = new Employee();
-        employee.setEmployeeCode(request.getEmployeeCode());
-        employee.setFirstName(request.getFirstName());
-        employee.setMiddleName(request.getMiddleName());
-        employee.setLastName(request.getLastName());
-        employee.setBiometricId(request.getBiometricId());
-        Character gender = (request.getGender() == null || request.getGender().isEmpty()) ? null : request.getGender().charAt(0);
-        employee.setGender(gender);
-        employee.setDateOfBirth(request.getDateOfBirth());
-        employee.setDateOfJoining(request.getDateOfJoining());
-        employee.setMobileNumber(request.getMobileNumber());
-        employee.setEmail(request.getEmail());
-        employee.setAadhaarNumber(request.getAadhaarNumber());
-        employee.setEmploymentType(request.getEmploymentType());
-        employee.setExperienceYears(request.getExperienceYears());
-        employee.setRemarks(request.getRemarks());
+        int successfulCount = 0;
 
-        employee.setDepartment(departmentRepository.getReferenceById(request.getDepartmentId()));
-        employee.setFactory(factoryRepository.getReferenceById(request.getFactoryId()));
-        employee.setShift(shiftRepository.getReferenceById(request.getShiftId()));
-        employee.setOrganization(organizationRepository.getReferenceById(request.getOrganizationId()));
-        employee.setDesignation(designationRepository.getReferenceById(request.getDesignationId()));
-        employee.setSection(sectionRepository.getReferenceById(request.getSectionId()));
+        for (AddEmployeeRequest request : requestList) {
+            log.info("Processing employee code: {}", request.getEmployeeCode());
 
-        if (request.getReportingManagerId() != null) {
-            employee.setEmployee(employeeRepository.getReferenceById(request.getReportingManagerId()));
-        }
-
-        employee.setCreatedBy(Long.parseLong(adminId));
-        employee.setVersionNo(1);
-        employee.setRecordStatus('A');
-
-        employeeRepository.save(employee);
-        log.info("Employee successfully saved in master schema with ID: {}", employee.getEmployeeId());
-
-        String plainPassword = generateSystemPassword();
-        try {
-            EmployeeLoginDto employeeLoginDto = new EmployeeLoginDto();
-            employeeLoginDto.setEmployeeId(employee.getEmployeeId());
-            employeeLoginDto.setUsername(employee.getEmail());
-            employeeLoginDto.setPlainTextPassword(plainPassword);
-            employeeLoginDto.setRoleId(request.getRoleId());
-
-            authServiceClient.registerEmployeeLogin(employeeLoginDto);
-
-            log.info("Credentials successfully transmitted to Auth Service for Employee ID: {}", employee.getEmployeeId());
-        } catch (FeignException e) {
-            log.error("Auth service failed with status {}. Manually rolling back.", e.status());
-
-            employeeRepository.delete(employee);
-
-            String exactErrorMessage = "Authentication setup failed in upstream service.";
-            try {
-                ObjectMapper mapper = new ObjectMapper();
-                JsonNode errorNode = mapper.readTree(e.contentUTF8());
-
-                if (errorNode.has("response") && errorNode.get("response").has("message")) {
-                    exactErrorMessage = errorNode.get("response").get("message").asText();
-                } else if (errorNode.has("message")) {
-                    exactErrorMessage = errorNode.get("message").asText();
-                }
-            } catch (Exception parseException) {
-                log.warn("Could not parse Feign error body", parseException);
+            if (employeeRepository.existsByEmployeeCode(request.getEmployeeCode())) {
+                log.warn("Creation failed: Employee code {} already exists", request.getEmployeeCode());
+                throw new BadRequestException("Employee code " + request.getEmployeeCode() + " already exists");
+            }
+            if (employeeRepository.existsByEmail(request.getEmail())) {
+                log.warn("Creation failed: Email {} already exists", request.getEmail());
+                throw new BadRequestException("Email " + request.getEmail() + " already exists");
             }
 
-            throw new MicroserviceException(e.status(), "Auth Service Error: " + exactErrorMessage);
+            Employee employee = new Employee();
+            employee.setEmployeeCode(request.getEmployeeCode());
+            employee.setFirstName(request.getFirstName());
+            employee.setMiddleName(request.getMiddleName());
+            employee.setLastName(request.getLastName());
+            employee.setBiometricId(request.getBiometricId());
 
-        } catch (Exception e) {
-            log.error("Unexpected error during auth setup. Manually rolling back.", e);
-            employeeRepository.delete(employee);
-            throw new MicroserviceException(500, "Employee creation aborted due to an internal system error.");
+            Character gender = (request.getGender() == null || request.getGender().isEmpty()) ? null : request.getGender().charAt(0);
+            employee.setGender(gender);
+            employee.setDateOfBirth(request.getDateOfBirth());
+            employee.setDateOfJoining(request.getDateOfJoining());
+            employee.setMobileNumber(request.getMobileNumber());
+            employee.setEmail(request.getEmail());
+            employee.setAadhaarNumber(request.getAadhaarNumber());
+            employee.setEmploymentType(request.getEmploymentType());
+            employee.setExperienceYears(request.getExperienceYears());
+            employee.setRemarks(request.getRemarks());
+
+            employee.setDepartment(departmentRepository.getReferenceById(request.getDepartmentId()));
+            employee.setFactory(factoryRepository.getReferenceById(request.getFactoryId()));
+            employee.setShift(shiftRepository.getReferenceById(request.getShiftId()));
+            employee.setOrganization(organizationRepository.getReferenceById(request.getOrganizationId()));
+            employee.setDesignation(designationRepository.getReferenceById(request.getDesignationId()));
+            employee.setSection(sectionRepository.getReferenceById(request.getSectionId()));
+
+            if (request.getReportingManagerId() != null) {
+                employee.setEmployee(employeeRepository.getReferenceById(request.getReportingManagerId()));
+            }
+
+            employee.setCreatedBy(Long.parseLong(adminId));
+            employee.setVersionNo(1);
+            employee.setRecordStatus('A');
+
+            employeeRepository.save(employee);
+            log.info("Employee successfully saved in master schema with ID: {}", employee.getEmployeeId());
+
+            String plainPassword = generateSystemPassword();
+            try {
+                EmployeeLoginDto employeeLoginDto = new EmployeeLoginDto();
+                employeeLoginDto.setEmployeeId(employee.getEmployeeId());
+                employeeLoginDto.setUsername(employee.getEmail());
+                employeeLoginDto.setPlainTextPassword(plainPassword);
+                employeeLoginDto.setRoleId(request.getRoleId());
+
+                authServiceClient.registerEmployeeLogin(employeeLoginDto);
+
+                log.info("Credentials successfully transmitted to Auth Service for Employee ID: {}", employee.getEmployeeId());
+                successfulCount++;
+
+//                sendWelcomeEmail(employee.getEmail(), employee.getFirstName(), employee.getEmployeeCode(), plainPassword); // Need to send password in production
+
+            } catch (FeignException e) {
+                log.error("Auth service failed with status {}. Manually rolling back employee {}.", e.status(), request.getEmployeeCode());
+                employeeRepository.delete(employee);
+
+                String exactErrorMessage = "Authentication setup failed in upstream service.";
+                try {
+                    ObjectMapper mapper = new ObjectMapper();
+                    JsonNode errorNode = mapper.readTree(e.contentUTF8());
+
+                    if (errorNode.has("response") && errorNode.get("response").has("message")) {
+                        exactErrorMessage = errorNode.get("response").get("message").asText();
+                    } else if (errorNode.has("message")) {
+                        exactErrorMessage = errorNode.get("message").asText();
+                    }
+                } catch (Exception parseException) {
+                    log.warn("Could not parse Feign error body", parseException);
+                }
+
+                throw new MicroserviceException(e.status(), "Auth Service Error for " + request.getEmployeeCode() + ": " + exactErrorMessage);
+
+            } catch (Exception e) {
+                log.error("Unexpected error during auth setup. Manually rolling back employee {}.", request.getEmployeeCode(), e);
+                employeeRepository.delete(employee);
+                throw new MicroserviceException(500, "Employee creation aborted for " + request.getEmployeeCode() + " due to an internal system error.");
+            }
         }
 
-//        sendWelcomeEmail(employee.getEmail(), employee.getFirstName(), employee.getEmployeeCode(), plainPassword); // Need to send password in production
-
-        return new SingleResponse<>(
-                "Employee successfully created with code: " + employee.getEmployeeCode(),
-                CustomStatus.SUCCESS
-        );
+        return new SingleResponse<>(successfulCount + " employee(s) successfully created.", CustomStatus.SUCCESS);
     }
 
     @Override
     public SingleResponse<PageResponse<ListOfEmployeeResponse>> getAllEmployee(Pageable pageable) {
-        Pageable sortedPageable = pageable.getSort().isSorted() ? pageable :
-                PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(),
-                        Sort.by(Sort.Order.asc("firstName").nullsLast()));
+        Pageable sortedPageable = pageable.getSort().isSorted() ? pageable : PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), Sort.by(Sort.Order.asc("firstName").nullsLast()));
 
         Page<Employee> employeePage = employeeRepository.findByRecordStatus('A', sortedPageable);
         List<Employee> employeeList = employeePage.getContent();
 
-        List<ListOfEmployeeResponse> employeeResponseList = employeeList.stream()
-                .map(employee -> {
-                    ListOfEmployeeResponse response = modelMapper.map(employee, ListOfEmployeeResponse.class);
+        List<ListOfEmployeeResponse> employeeResponseList = employeeList.stream().map(employee -> {
+            ListOfEmployeeResponse response = modelMapper.map(employee, ListOfEmployeeResponse.class);
 
-                    if (employee.getEmployee() != null) {
-                        ManagerResponse managerDto = modelMapper.map(employee.getEmployee(), ManagerResponse.class);
-                        response.setReportingManager(managerDto);
-                    }
-                    return response;
-                })
-                .toList();
+            if (employee.getEmployee() != null) {
+                ManagerResponse managerDto = modelMapper.map(employee.getEmployee(), ManagerResponse.class);
+                response.setReportingManager(managerDto);
+            }
+            return response;
+        }).toList();
 
-        PageResponse<ListOfEmployeeResponse> pageResponse = new PageResponse<>(
-                employeeResponseList,
-                employeePage.getNumber(),
-                employeePage.getSize(),
-                employeePage.getTotalElements(),
-                employeePage.getTotalPages(),
-                employeePage.isLast()
-        );
+        PageResponse<ListOfEmployeeResponse> pageResponse = new PageResponse<>(employeeResponseList, employeePage.getNumber(), employeePage.getSize(), employeePage.getTotalElements(), employeePage.getTotalPages(), employeePage.isLast());
 
-        return new SingleResponse<>(
-                pageResponse,
-                CustomStatus.SUCCESS
-        );
+        return new SingleResponse<>(pageResponse, CustomStatus.SUCCESS);
     }
 
     @Override
@@ -178,8 +170,7 @@ public class EmployeeServiceImpl implements EmployeeService {
     public SingleResponse<?> updateEmployee(Long employeeId, UpdateEmployeeDetailsRequest request, String adminId) {
         log.info("Initiating employee update for ID: {} by Admin: {}", employeeId, adminId);
 
-        Employee employee = employeeRepository.findById(employeeId)
-                .orElseThrow(() -> new NotFoundException("Employee not found with ID: " + employeeId));
+        Employee employee = employeeRepository.findById(employeeId).orElseThrow(() -> new NotFoundException("Employee not found with ID: " + employeeId));
 
         if (request.getEmail() != null && !request.getEmail().trim().isEmpty() && !request.getEmail().equals(employee.getEmail())) {
             if (employeeRepository.existsByEmail(request.getEmail())) {
@@ -237,51 +228,36 @@ public class EmployeeServiceImpl implements EmployeeService {
         employeeRepository.save(employee);
         log.info("Successfully updated employee ID: {}", employeeId);
 
-        return new SingleResponse<>(
-                "Employee updated successfully",
-                CustomStatus.SUCCESS
-        );
+        return new SingleResponse<>("Employee updated successfully", CustomStatus.SUCCESS);
     }
 
     @Override
     public SingleResponse<EmployeeResponse> getEmployeeById(Long employeeId) {
-        Employee employee = employeeRepository.findById(employeeId)
-                .orElseThrow(() -> new NotFoundException("Employee not found with ID: " + employeeId));
+        Employee employee = employeeRepository.findById(employeeId).orElseThrow(() -> new NotFoundException("Employee not found with ID: " + employeeId));
 
         EmployeeResponse employeeResponse = modelMapper.map(employee, EmployeeResponse.class);
         employeeResponse.setManagerResponse(modelMapper.map(employee.getEmployee(), ManagerResponse.class));
-        return new SingleResponse<>(
-                employeeResponse,
-                CustomStatus.SUCCESS
-        );
+        return new SingleResponse<>(employeeResponse, CustomStatus.SUCCESS);
     }
 
     @Override
     public SingleResponse<?> deleteEmployeeById(Long employeeId, String adminId) {
-        Employee employee = employeeRepository.findById(employeeId)
-                .orElseThrow(() -> new NotFoundException("Employee not found"));
+        Employee employee = employeeRepository.findById(employeeId).orElseThrow(() -> new NotFoundException("Employee not found"));
 
         employee.setRecordStatus('D');
         employee.setUpdatedBy(Long.parseLong(adminId));
         employeeRepository.save(employee);
-        return new SingleResponse<>(
-                "Employee successfully deleted",
-                CustomStatus.SUCCESS
-        );
+        return new SingleResponse<>("Employee successfully deleted", CustomStatus.SUCCESS);
     }
 
     @Override
     public SingleResponse<EmployeeResponse> getEmployeeDetailsByToken(String employeeId) {
-        Employee employee = employeeRepository.findById(Long.parseLong(employeeId))
-                .orElseThrow(() -> new NotFoundException("Employee not found"));
+        Employee employee = employeeRepository.findById(Long.parseLong(employeeId)).orElseThrow(() -> new NotFoundException("Employee not found"));
 
         EmployeeResponse employeeResponse = modelMapper.map(employee, EmployeeResponse.class);
         employeeResponse.setManagerResponse(modelMapper.map(employee.getEmployee(), ManagerResponse.class));
 
-        return new SingleResponse<>(
-                employeeResponse,
-                CustomStatus.SUCCESS
-        );
+        return new SingleResponse<>(employeeResponse, CustomStatus.SUCCESS);
     }
 
     private String generateSystemPassword() {
@@ -297,6 +273,8 @@ public class EmployeeServiceImpl implements EmployeeService {
 
         return password.toString();
     }
+
+//    @Async
 //    private void sendWelcomeEmail(String toEmail, String name, String code, String password) {
 //        try {
 //            SimpleMailMessage message = new SimpleMailMessage();
