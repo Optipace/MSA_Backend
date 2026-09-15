@@ -7,6 +7,7 @@ import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.sql.Date;
+import java.time.LocalDate;
 
 @Setter
 @Getter
@@ -28,9 +29,9 @@ public class ListOfEmployeeResponse {
 
     private String gender;
 
-    private Date dateOfBirth;
+    private LocalDate dateOfBirth;
 
-    private Date dateOfJoining;
+    private LocalDate dateOfJoining;
 
     private String mobileNumber;
 
@@ -53,6 +54,8 @@ public class ListOfEmployeeResponse {
     private Long designationId;
 
     private Long sectionId;
+
+    private Long roleId;
 
     private ManagerResponse reportingManager;
 }

@@ -17,9 +17,13 @@ import org.optipace.authService.repository.RoleRepository;
 import org.optipace.authService.service.InternalAuthService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.bind.annotation.RequestBody;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -77,6 +81,26 @@ public class InternalAuthServiceImpl implements InternalAuthService {
 
         return new SingleResponse<>(
                 null,
+                new Response(
+                        200,
+                        "Success"
+                )
+        );
+    }
+
+    public SingleResponse<Map<Long, Long>> getRoleIdsForEmployees(List<Long> employeeIds) {
+        List<EmployeeRole> employeeRoles = employeeRoleRepository.findByEmployeeIdInAndIsPrimaryRoleTrue(employeeIds);
+
+        // The result in a Map of <EmployeeId, RoleId>
+        Map<Long, Long> employeeRoleIdsResponse = employeeRoles.stream()
+                .collect(Collectors.toMap(
+                        EmployeeRole::getEmployeeId,
+                        er -> er.getRole().getRoleId(),
+                        (existing, replacement) -> existing
+                ));
+
+        return new SingleResponse<>(
+                employeeRoleIdsResponse,
                 new Response(
                         200,
                         "Success"

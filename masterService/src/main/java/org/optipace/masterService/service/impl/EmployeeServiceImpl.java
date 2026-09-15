@@ -27,7 +27,7 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
 import java.security.SecureRandom;
-import java.util.List;
+import java.util.*;
 
 @Service
 @AllArgsConstructor
@@ -150,12 +150,57 @@ public class EmployeeServiceImpl implements EmployeeService {
         Page<Employee> employeePage = employeeRepository.findByRecordStatus('A', sortedPageable);
         List<Employee> employeeList = employeePage.getContent();
 
+        Set<Long> uniqueIdsForRoles = new HashSet<>();
+        for (Employee emp : employeeList) {
+            uniqueIdsForRoles.add(emp.getEmployeeId());
+            if (emp.getEmployee() != null) {
+                uniqueIdsForRoles.add(emp.getEmployee().getEmployeeId());
+            }
+        }
+        List<Long> allRequiredIds = new ArrayList<>(uniqueIdsForRoles);
+
+        Map<Long, Long> employeeRoleMap = new HashMap<>();
+        if (!allRequiredIds.isEmpty()) {
+            try {
+                SingleResponse<Map<Long, Long>> employeeRoleMapResponse = authServiceClient.getRoleIdsForEmployees(allRequiredIds);
+                employeeRoleMap = employeeRoleMapResponse.getData();
+            } catch (FeignException e) {
+                log.warn("Failed to fetch role IDs from Auth Service for batch employee list", e);
+
+                String exactErrorMessage = "Authentication setup failed in upstream service.";
+                try {
+                    ObjectMapper mapper = new ObjectMapper();
+                    JsonNode errorNode = mapper.readTree(e.contentUTF8());
+
+                    if (errorNode.has("response") && errorNode.get("response").has("message")) {
+                        exactErrorMessage = errorNode.get("response").get("message").asText();
+                    } else if (errorNode.has("message")) {
+                        exactErrorMessage = errorNode.get("message").asText();
+                    }
+                } catch (Exception parseException) {
+                    log.warn("Could not parse Feign error body", parseException);
+                }
+                throw new MicroserviceException(e.status(), "Auth Service Error" + exactErrorMessage);
+
+            } catch (Exception e) {
+                log.error("Unexpected error caught while extracting role ids for employees");
+                throw new MicroserviceException(500, "Employee role Ids fetching failed due to an internal system error.");
+            }
+        }
+
+        Map<Long, Long> finalRoleMap = employeeRoleMap;
         List<ListOfEmployeeResponse> employeeResponseList = employeeList.stream().map(employee -> {
             ListOfEmployeeResponse response = modelMapper.map(employee, ListOfEmployeeResponse.class);
 
+            response.setRoleId(finalRoleMap.get(employee.getEmployeeId()));
+//            response.setDateOfBirth(employee.getDateOfBirth());
+//            response.setDateOfJoining(employee.getDateOfJoining());
             if (employee.getEmployee() != null) {
                 ManagerResponse managerDto = modelMapper.map(employee.getEmployee(), ManagerResponse.class);
+                managerDto.setRoleId(finalRoleMap.get(employee.getEmployee().getEmployeeId()));
                 response.setReportingManager(managerDto);
+//                response.setDateOfBirth(employee.getEmployee().getDateOfBirth());
+//                response.setDateOfJoining(employee.getEmployee().getDateOfJoining());
             }
             return response;
         }).toList();
