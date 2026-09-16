@@ -28,10 +28,9 @@ public interface ShiftRepository extends JpaRepository<Shift, Long> {
             Character recordStatus
     );
 
-    boolean existsByFactory_FactoryIdAndShiftCodeAndRecordStatus(
+    boolean existsByFactory_FactoryIdAndShiftCode(
             Long factoryId,
-            String shiftCode,
-            Character recordStatus
+            String shiftCode
     );
 
     boolean existsByFactory_FactoryIdAndShiftCodeAndShiftIdNotAndRecordStatus(

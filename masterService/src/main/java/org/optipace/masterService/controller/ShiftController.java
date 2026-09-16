@@ -23,13 +23,13 @@ public class ShiftController {
     private final ShiftService shiftService;
 
     @PostMapping("/v1/add")
-    @PreAuthorize("hasAuthority('FACTORY_ADMIN')")
+    @PreAuthorize("hasAuthority('SUPER_ADMIN')")
     public ResponseEntity<SingleResponse<?>> createShift(@Valid @RequestBody AddShiftRequest request,@RequestHeader("X-User-Id") String adminId) {
         return ResponseEntity.ok(shiftService.createShift(request, adminId));
         }
 
     @GetMapping("/v1/all")
-    @PreAuthorize("hasAuthority('FACTORY_ADMIN')")
+    @PreAuthorize("hasAuthority('SUPER_ADMIN')")
     public ResponseEntity<SingleResponse<PageResponse<ListOfShiftResponse>>> getAllShift(
     		@RequestParam(defaultValue = "0") int page, 
     		@RequestParam(defaultValue = "10") int size) {
@@ -38,7 +38,7 @@ public class ShiftController {
         }
 
     @PatchMapping("/v1/update/{shiftId}")
-    @PreAuthorize("hasAuthority('FACTORY_ADMIN')")
+    @PreAuthorize("hasAuthority('SUPER_ADMIN')")
     public ResponseEntity<SingleResponse<?>> updateShift(
             @PathVariable Long shiftId,
             @Valid @RequestBody UpdateShiftRequest request,
@@ -53,7 +53,7 @@ public class ShiftController {
         }
 
     @DeleteMapping("/v1/delete/{shiftId}")
-    @PreAuthorize("hasAuthority('FACTORY_ADMIN')")
+    @PreAuthorize("hasAuthority('SUPER_ADMIN')")
     public ResponseEntity<SingleResponse<?>> deleteShiftById(
             @PathVariable Long shiftId,
             @RequestHeader("X-User-Id") String adminId) {

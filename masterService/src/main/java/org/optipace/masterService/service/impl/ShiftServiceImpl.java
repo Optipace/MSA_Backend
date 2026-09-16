@@ -36,10 +36,9 @@ public class ShiftServiceImpl implements ShiftService {
     @Override
     public SingleResponse<?> createShift(AddShiftRequest request,String adminId) { 	
         log.info( "Initiating shift creation for code: {} by Admin: {}",request.getShiftCode(),adminId);
-        if (shiftRepository.existsByFactory_FactoryIdAndShiftCodeAndRecordStatus(
+        if (shiftRepository.existsByFactory_FactoryIdAndShiftCode(
                 request.getFactoryId(),
-                request.getShiftCode(),
-                'A')) {            
+                request.getShiftCode())) {            
         	log.warn("Shift code {} already exists in factory {}",request.getShiftCode(),request.getFactoryId());
             throw new BadRequestException("Shift code already exists in this factory");
             }
