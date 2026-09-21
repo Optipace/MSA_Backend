@@ -8,5 +8,12 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface SectionRepository extends JpaRepository<Section, Long> {
+
     Page<Section> findByRecordStatus(char recordStatus, Pageable pageable);
+
+    boolean existsBySectionCode(String sectionCode);
+
+    boolean existsByFactory_FactoryIdAndDepartment_DepartmentIdAndSectionCodeAndSectionIdNot(
+            Long factoryId, Long departmentId, String sectionCode, Long sectionId);
+
 }
