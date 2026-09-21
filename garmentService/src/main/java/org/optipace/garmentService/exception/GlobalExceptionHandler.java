@@ -1,9 +1,8 @@
-package org.optipace.masterService.exception;
+package org.optipace.garmentService.exception;
 
 
 import lombok.extern.slf4j.Slf4j;
-import org.optipace.masterService.dto.response.Response;
-import org.optipace.masterService.dto.response.SingleResponse;
+import org.optipace.garmentService.dto.response.SingleResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -14,11 +13,8 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
-import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 @RestControllerAdvice
 @Slf4j
@@ -150,7 +146,7 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(ex.getStatusCode())
                 .body(new SingleResponse<>(
                         null,
-                        new Response(ex.getStatusCode(), ex.getMessage()) // Assuming you have a Response object for errors
+                        new SingleResponse.ResponseInfo(ex.getStatusCode(), ex.getMessage()) // Assuming you have a Response object for errors
                 ));
     }
 
