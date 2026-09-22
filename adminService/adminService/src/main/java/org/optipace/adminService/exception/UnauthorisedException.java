@@ -1,4 +1,4 @@
-package org.optipace.masterService.exception;
+package org.optipace.adminService.exception;
 
 public class UnauthorisedException extends RuntimeException {
 

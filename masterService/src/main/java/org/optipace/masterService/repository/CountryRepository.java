@@ -11,19 +11,13 @@ import java.util.Optional;
 @Repository
 public interface CountryRepository extends JpaRepository<Country, Long> {
 
-<<<<<<< HEAD
-    Page<Country> findByRecordStatus(
-            Character recordStatus,
-            Pageable pageable
-    );
-
-   
-=======
 	boolean existsByCountryName(String country_name);
 
 	boolean existsByCountryCodeAndCountryIdNot(String country_name, Long id);
 
 	boolean existsByCountryCode(String country_code);
 
->>>>>>> development
+	Page<Country> findByRecordStatus(char c, Pageable pageable);
+
+
 }
