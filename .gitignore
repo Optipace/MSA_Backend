@@ -1,0 +1,3 @@
+# Ignore local configuration files
+authService/src/main/resources/application-dev.properties
+msa-service/src/main/resources/application-dev.properties
