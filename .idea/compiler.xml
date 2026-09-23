@@ -22,6 +22,15 @@
         <module name="authService" />
         <module name="assessmentService" />
       </profile>
+      <profile name="Annotation profile for garmentService" enabled="true">
+        <sourceOutputDir name="target/generated-sources/annotations" />
+        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
+        <outputRelativeToContentRoot value="true" />
+        <processorPath useClasspath="false">
+          <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.46/lombok-1.18.46.jar" />
+        </processorPath>
+        <module name="garmentService" />
+      </profile>
     </annotationProcessing>
   </component>
   <component name="JavacSettings">
@@ -30,6 +39,7 @@
       <module name="assessmentService" options="-parameters" />
       <module name="authService" options="-parameters" />
       <module name="eureka-server" options="-parameters" />
+      <module name="garmentService" options="-parameters" />
       <module name="masterService" options="-parameters" />
     </option>
   </component>
