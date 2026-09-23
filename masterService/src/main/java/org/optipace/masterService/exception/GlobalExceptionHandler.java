@@ -2,7 +2,6 @@ package org.optipace.masterService.exception;
 
 
 import lombok.extern.slf4j.Slf4j;
-
 import org.optipace.masterService.dto.response.Response;
 import org.optipace.masterService.dto.response.SingleResponse;
 import org.springframework.http.HttpStatus;
