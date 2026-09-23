@@ -5,6 +5,7 @@
     <file url="file://$PROJECT_DIR$/assessmentService/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/authService/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/eurekaServer/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/garmentService/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/masterService/src/main/java" charset="UTF-8" />
   </component>
 </project>
