@@ -17,8 +17,10 @@ public class GarmentInstanceCreateRequest {
     @NotBlank(message = "Serial number is required")
     private String serialNumber;
 
+    @NotNull(message = "QR Code is required")
     private String qrCode;
 
+    @NotNull(message = "BAR Code is required")
     private String barcode;
 
     private String currentStatus;
