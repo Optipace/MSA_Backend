@@ -143,7 +143,7 @@ public class GarmentAreaDefectServiceImpl implements GarmentAreaDefectService {
     public SingleResponse<?> deleteGarmentAreaDefect(Long garmentAreaDefectId, String userId) {
 
         GarmentAreaDefect garmentAreaDefect = garmentAreaDefectRepository.findById(garmentAreaDefectId).orElseThrow(() -> new NotFoundException("Garment area defect not found"));
-        //garmentAreaDefect.setRecordStatus("D");
+        garmentAreaDefect.setRecordStatus('D');
         garmentAreaDefect.setUpdatedBy(Long.parseLong(userId));
         return SingleResponse.success(null, "Garment area defect successfully deleted");
     }

@@ -8,6 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.validation.FieldError;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -162,6 +163,26 @@ public class GlobalExceptionHandler {
 
         return new ResponseEntity<>(err,
                 HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+    
+    
+    
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<ErrorResponse> handleMethodNotAllowed(
+            HttpRequestMethodNotSupportedException ex) {
+        
+        String message = String.format(
+            "Wrong HTTP method '%s' for this endpoint. Supported methods: %s",
+            ex.getMethod(),
+            ex.getSupportedHttpMethods()
+        );
+        log.warn("Method not allowed: {}", message);
+        
+        ErrorResponse err = new ErrorResponse(
+            HttpStatus.METHOD_NOT_ALLOWED.value(),
+            message
+        );
+        return new ResponseEntity<>(err, HttpStatus.METHOD_NOT_ALLOWED);
     }
 
 
