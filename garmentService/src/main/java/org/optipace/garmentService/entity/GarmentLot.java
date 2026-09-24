@@ -83,5 +83,7 @@ public class GarmentLot {
     
     // ⚠️ Must be char(1) — NOT varchar(1)
     @Column(name = "record_status", columnDefinition = "char(1)")
-    private String recordStatus = "A";
+    //private String recordStatus = "A";
+    private Character recordStatus = 'A';
+
 }

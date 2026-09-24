@@ -111,7 +111,7 @@ public class ProductCategoryServiceImpl implements ProductCategoryService {
                     request.getRemarks()
             );
 
-            productCategory.setRecordStatus("A");
+            productCategory.setRecordStatus('A');
 
             ProductCategory saved =
                     productCategoryRepository.save(productCategory);
@@ -352,7 +352,7 @@ public class ProductCategoryServiceImpl implements ProductCategoryService {
                         );
 
         // Soft delete
-        productCategory.setRecordStatus("D");
+        productCategory.setRecordStatus('D');
 
         if (adminId != null && !adminId.trim().isEmpty()) {
             productCategory.setUpdatedBy(
@@ -386,7 +386,7 @@ public class ProductCategoryServiceImpl implements ProductCategoryService {
                 productCategory.getUpdatedOn(),
                 productCategory.getVersionNo(),
                 productCategory.getRemarks(),
-                productCategory.getRecordStatus()
+                productCategory.getRecordStatus().toString()
         );
     }
 }

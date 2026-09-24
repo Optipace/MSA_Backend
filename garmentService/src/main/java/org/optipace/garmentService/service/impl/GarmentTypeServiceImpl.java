@@ -122,7 +122,7 @@ public class GarmentTypeServiceImpl implements GarmentTypeService {
             }
 
             garmentType.setVersionNo(1);
-            garmentType.setRecordStatus("A");
+            garmentType.setRecordStatus('A');
 
             GarmentType saved =
                     garmentTypeRepository.save(garmentType);
@@ -370,7 +370,7 @@ public class GarmentTypeServiceImpl implements GarmentTypeService {
                         );
 
         // Soft delete
-        garmentType.setRecordStatus("D");
+        garmentType.setRecordStatus('D');
 
         if (adminId != null && !adminId.trim().isEmpty()) {
             garmentType.setUpdatedBy(

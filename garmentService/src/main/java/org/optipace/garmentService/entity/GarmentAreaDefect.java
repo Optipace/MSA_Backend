@@ -81,6 +81,9 @@ public class GarmentAreaDefect {
     private String remarks;
     
     // ⚠️ Must be char(1) to match DB — NOT varchar(1)
-    @Column(name = "record_status", columnDefinition = "char(1)")
-    private Character recordStatus;
+   // @Column(name = "record_status", columnDefinition = "char(1)")
+    @Column(name = "record_status", length = 1)
+    //private Character recordStatus;
+    private char recordStatus = 'A';
+
 }

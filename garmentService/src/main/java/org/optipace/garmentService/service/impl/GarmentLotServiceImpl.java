@@ -66,7 +66,7 @@ public class GarmentLotServiceImpl implements GarmentLotService {
         garmentLot.setVersionNo(1);
 
         // Active record
-        garmentLot.setRecordStatus("A");
+        garmentLot.setRecordStatus('A');
         garmentLotRepository.save(garmentLot);
         return SingleResponse.success(HttpStatus.SC_CREATED, "Garment lot successfully created with lot number: " + garmentLot.getLotNumber());
     }

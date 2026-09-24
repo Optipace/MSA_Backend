@@ -77,7 +77,9 @@ public class GarmentInstance {
     
     // ⚠️ Must be char(1) — NOT varchar(1)
     @Column(name = "record_status", columnDefinition = "char(1)")
-    private String recordStatus = "A";
+   // private String recordStatus = "A";
+    private Character recordStatus = 'A';
+
     
     // ===== FK: garment_lot =====
     @Column(name = "garment_lot_id", nullable = false)
