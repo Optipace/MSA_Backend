@@ -7,7 +7,7 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class ListOfDefectCategoryResponse {
+public class DefectCategoryResponse {
 
     private Long defectCategoryId;
     private String categoryCode;
