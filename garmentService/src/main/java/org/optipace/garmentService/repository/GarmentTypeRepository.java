@@ -10,23 +10,14 @@ import java.util.Optional;
 @Repository
 public interface GarmentTypeRepository extends JpaRepository<GarmentType, Long> {
 
-    Page<GarmentType> findByRecordStatus(String recordStatus, Pageable pageable);
+	Page<GarmentType> findByRecordStatus(Character recordStatus, Pageable pageable);
 
-    Optional<GarmentType> findByGarmentTypeIdAndRecordStatus(
-            Long garmentTypeId,
-            String recordStatus
-    );
+	Optional<GarmentType> findByGarmentTypeIdAndRecordStatus(Long garmentTypeId, Character recordStatus);
 
-    boolean existsByGarmentCodeAndRecordStatus(
-            String garmentCode,
-            String recordStatus
-    );
+	boolean existsByGarmentCodeAndRecordStatus(String garmentCode, String recordStatus);
 
-    boolean existsByGarmentCodeAndGarmentTypeIdNotAndRecordStatus(
-            String garmentCode,
-            Long garmentTypeId,
-            String recordStatus
-    );
+	boolean existsByGarmentCodeAndGarmentTypeIdNotAndRecordStatus(String garmentCode, Long garmentTypeId,
+			String recordStatus);
 
 	boolean existsByGarmentCode(String garmentCode);
 }

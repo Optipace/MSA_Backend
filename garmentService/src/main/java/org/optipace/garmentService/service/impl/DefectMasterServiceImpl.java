@@ -30,254 +30,141 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class DefectMasterServiceImpl implements DefectMasterService {
 
-    private final DefectMasterRepository defectMasterRepository;
+	private final DefectMasterRepository defectMasterRepository;
 
-    @Override
-    @Transactional
-    public SingleResponse<?> createDefectMaster(
-            AddDefectMasterRequest request,
-            String adminId) {
+	@Override
+	@Transactional
+	public SingleResponse<?> createDefectMaster(AddDefectMasterRequest request, String adminId) {
 
-        log.info(
-                "Initiating defect creation for code: {} by Admin: {}",
-                request.getDefectCode(),
-                adminId
-        );
+		log.info("Initiating defect creation for code: {} by Admin: {}", request.getDefectCode(), adminId);
 
-        if (request.getDefectCategoryId() == null) {
-            throw new BadRequestException(
-                    "Defect category ID is required"
-            );
-        }
+		if (request.getDefectCategoryId() == null) {
+			throw new BadRequestException("Defect category ID is required");
+		}
 
-        String defectCode = null;
+		String defectCode = null;
 
-        if (request.getDefectCode() != null
-                && !request.getDefectCode().trim().isEmpty()) {
+		if (request.getDefectCode() != null && !request.getDefectCode().trim().isEmpty()) {
 
-            defectCode = request.getDefectCode()
-                    .trim()
-                    .toUpperCase();
+			defectCode = request.getDefectCode().trim().toUpperCase();
 
-            if (defectMasterRepository.existsByDefectCode(
-                    defectCode)) {
+			if (defectMasterRepository.existsByDefectCode(defectCode)) {
 
-                throw new BadRequestException(
-                        "Defect with code "
-                                + defectCode
-                                + " already exists"
-                );
-            }
-        }
+				throw new BadRequestException("Defect with code " + defectCode + " already exists");
+			}
+		}
 
-        String defectName = null;
+		String defectName = null;
 
-        if (request.getDefectName() != null
-                && !request.getDefectName().trim().isEmpty()) {
+		if (request.getDefectName() != null && !request.getDefectName().trim().isEmpty()) {
 
-            defectName = request.getDefectName().trim();
-        }
+			defectName = request.getDefectName().trim();
+		}
 
-        DefectMaster defectMaster = new DefectMaster();
+		DefectMaster defectMaster = new DefectMaster();
 
-        defectMaster.setDefectCategoryId(
-                request.getDefectCategoryId()
-        );
+		defectMaster.setDefectCategoryId(request.getDefectCategoryId());
 
-        defectMaster.setDefectCode(
-                defectCode
-        );
+		defectMaster.setDefectCode(defectCode);
 
-        defectMaster.setDefectName(
-                defectName
-        );
+		defectMaster.setDefectName(defectName);
 
-        defectMaster.setDescription(
-                request.getDescription()
-        );
+		defectMaster.setDescription(request.getDescription());
 
-        defectMaster.setDisplayOrder(
-                request.getDisplayOrder()
-        );
+		defectMaster.setDisplayOrder(request.getDisplayOrder());
 
-        DefectMaster saved =
-                defectMasterRepository.save(defectMaster);
+		DefectMaster saved = defectMasterRepository.save(defectMaster);
 
-        log.info(
-                "Defect successfully created with ID: {}",
-                saved.getDefectId()
-        );
+		log.info("Defect successfully created with ID: {}", saved.getDefectId());
 
-        return SingleResponse.success(
-                "Defect created successfully"
-                        + (saved.getDefectCode() != null
-                        ? " with code: " + saved.getDefectCode()
-                        : "")
-        );
-    }
+		return SingleResponse.success("Defect created successfully"
+				+ (saved.getDefectCode() != null ? " with code: " + saved.getDefectCode() : ""));
+	}
 
-    @Override
-    @Transactional(readOnly = true)
-    public SingleResponse<PageResponse<ListOfDefectMasterResponse>>
-            getAllDefectMasters(Pageable pageable) {
+	@Override
+	@Transactional(readOnly = true)
+	public SingleResponse<PageResponse<ListOfDefectMasterResponse>> getAllDefectMasters(Pageable pageable) {
 
-        Pageable sortedPageable = pageable.getSort().isSorted()
-                ? pageable
-                : PageRequest.of(
-                        pageable.getPageNumber(),
-                        pageable.getPageSize(),
-                        Sort.by(
-                                Sort.Order.asc("defectName")
-                                        .nullsLast()
-                        )
-                );
+		Pageable sortedPageable = pageable.getSort().isSorted() ? pageable
+				: PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(),
+						Sort.by(Sort.Order.asc("defectName").nullsLast()));
 
-        Page<DefectMaster> defectMasterPage =
-                defectMasterRepository.findAll(
-                        sortedPageable
-                );
+		Page<DefectMaster> defectMasterPage = defectMasterRepository.findAll(sortedPageable);
 
-        List<ListOfDefectMasterResponse> responseList =
-                defectMasterPage.getContent()
-                        .stream()
-                        .map(defect ->
-                                new ListOfDefectMasterResponse(
-                                        defect.getDefectId(),
-                                        defect.getDefectCategoryId(),
-                                        defect.getDefectCode(),
-                                        defect.getDefectName(),
-                                        defect.getDescription(),
-                                        defect.getDisplayOrder()
-                                )
-                        )
-                        .toList();
+		List<ListOfDefectMasterResponse> responseList = defectMasterPage.getContent().stream()
+				.map(defect -> new ListOfDefectMasterResponse(defect.getDefectId(), defect.getDefectCategoryId(),
+						defect.getDefectCode(), defect.getDefectName(), defect.getDescription(),
+						defect.getDisplayOrder()))
+				.toList();
 
-        PageResponse<ListOfDefectMasterResponse> pageResponse =
-                PageResponse.of(
-                        defectMasterPage.map(defectMaster ->
-                                new ListOfDefectMasterResponse(
-                                        defectMaster.getDefectId(),
-                                        defectMaster.getDefectCategoryId(),
-                                        defectMaster.getDefectCode(),
-                                        defectMaster.getDefectName(),
-                                        defectMaster.getDescription(),
-                                        defectMaster.getDisplayOrder()
-                                )
-                        )
-                );
+		PageResponse<ListOfDefectMasterResponse> pageResponse = PageResponse
+				.of(defectMasterPage.map(defectMaster -> new ListOfDefectMasterResponse(defectMaster.getDefectId(),
+						defectMaster.getDefectCategoryId(), defectMaster.getDefectCode(), defectMaster.getDefectName(),
+						defectMaster.getDescription(), defectMaster.getDisplayOrder())));
 
-        return SingleResponse.success(pageResponse);
-    }
+		return SingleResponse.success(pageResponse);
+	}
 
-    @Override
-    @Transactional(readOnly = true)
-    public SingleResponse<DefectMasterResponse>
-            getDefectMasterById(Long defectId) {
+	@Override
+	@Transactional(readOnly = true)
+	public SingleResponse<DefectMasterResponse> getDefectMasterById(Long defectId) {
 
-        DefectMaster defectMaster =
-                defectMasterRepository
-                        .findByDefectId(defectId)
-                        .orElseThrow(() ->
-                                new NotFoundException(
-                                        "Defect not found with ID: "
-                                                + defectId
-                                )
-                        );
+		DefectMaster defectMaster = defectMasterRepository.findByDefectId(defectId)
+				.orElseThrow(() -> new NotFoundException("Defect not found with ID: " + defectId));
 
-        DefectMasterResponse response =
-                mapToResponse(defectMaster);
+		DefectMasterResponse response = mapToResponse(defectMaster);
 
-        return SingleResponse.success(response);
-    }
+		return SingleResponse.success(response);
+	}
 
-    @Override
-    @Transactional
-    public SingleResponse<?> updateDefectMaster(
-            Long defectId,
-            UpdateDefectMasterRequest request,
-            String adminId) {
+	@Override
+	@Transactional
+	public SingleResponse<?> updateDefectMaster(Long defectId, UpdateDefectMasterRequest request, String adminId) {
 
-        log.info(
-                "Initiating defect update for ID: {} by Admin: {}",
-                defectId,
-                adminId
-        );
+		log.info("Initiating defect update for ID: {} by Admin: {}", defectId, adminId);
 
-        DefectMaster defectMaster =
-                defectMasterRepository
-                        .findByDefectId(defectId)
-                        .orElseThrow(() ->
-                                new NotFoundException(
-                                        "Defect not found with ID: "
-                                                + defectId
-                                )
-                        );
+		DefectMaster defectMaster = defectMasterRepository.findByDefectId(defectId)
+				.orElseThrow(() -> new NotFoundException("Defect not found with ID: " + defectId));
 
-        if (request.getDefectCategoryId() == null) {
-            throw new BadRequestException(
-                    "Defect category ID is required"
-            );
-        }
+		if (request.getDefectCategoryId() == null) {
+			throw new BadRequestException("Defect category ID is required");
+		}
 
-        String defectCode = null;
+		String defectCode = null;
 
-        if (request.getDefectCode() != null
-                && !request.getDefectCode().trim().isEmpty()) {
+		if (request.getDefectCode() != null && !request.getDefectCode().trim().isEmpty()) {
 
-            defectCode = request.getDefectCode()
-                    .trim()
-                    .toUpperCase();
+			defectCode = request.getDefectCode().trim().toUpperCase();
 
-            if (defectMasterRepository
-                    .existsByDefectCodeAndDefectIdNot(
-                            defectCode,
-                            defectId)) {
+			if (defectMasterRepository.existsByDefectCodeAndDefectIdNot(defectCode, defectId)) {
 
-                throw new BadRequestException(
-                        "Defect with code "
-                                + defectCode
-                                + " already exists"
-                );
-            }
-        }
+				throw new BadRequestException("Defect with code " + defectCode + " already exists");
+			}
+		}
 
-        String defectName = null;
+		String defectName = null;
 
-        if (request.getDefectName() != null
-                && !request.getDefectName().trim().isEmpty()) {
+		if (request.getDefectName() != null && !request.getDefectName().trim().isEmpty()) {
 
-            defectName = request.getDefectName().trim();
-        }
+			defectName = request.getDefectName().trim();
+		}
 
-        defectMaster.setDefectCategoryId(
-                request.getDefectCategoryId()
-        );
+		defectMaster.setDefectCategoryId(request.getDefectCategoryId());
 
-        defectMaster.setDefectCode(
-                defectCode
-        );
+		defectMaster.setDefectCode(defectCode);
 
-        defectMaster.setDefectName(
-                defectName
-        );
+		defectMaster.setDefectName(defectName);
 
-        defectMaster.setDescription(
-                request.getDescription()
-        );
+		defectMaster.setDescription(request.getDescription());
 
-        defectMaster.setDisplayOrder(
-                request.getDisplayOrder()
-        );
+		defectMaster.setDisplayOrder(request.getDisplayOrder());
 
-        defectMasterRepository.save(defectMaster);
+		defectMasterRepository.save(defectMaster);
 
-        log.info(
-                "Defect successfully updated with ID: {}",
-                defectId
-        );
+		log.info("Defect successfully updated with ID: {}", defectId);
 
-        return SingleResponse.success("Defect updated successfully");
-    }
+		return SingleResponse.success("Defect updated successfully");
+	}
 
 //    @Override
 //    @Transactional
@@ -314,16 +201,10 @@ public class DefectMasterServiceImpl implements DefectMasterService {
 //        );
 //    }
 
-    private DefectMasterResponse mapToResponse(
-            DefectMaster defectMaster) {
+	private DefectMasterResponse mapToResponse(DefectMaster defectMaster) {
 
-        return new DefectMasterResponse(
-                defectMaster.getDefectId(),
-                defectMaster.getDefectCategoryId(),
-                defectMaster.getDefectCode(),
-                defectMaster.getDefectName(),
-                defectMaster.getDescription(),
-                defectMaster.getDisplayOrder()
-        );
-    }
+		return new DefectMasterResponse(defectMaster.getDefectId(), defectMaster.getDefectCategoryId(),
+				defectMaster.getDefectCode(), defectMaster.getDefectName(), defectMaster.getDescription(),
+				defectMaster.getDisplayOrder());
+	}
 }

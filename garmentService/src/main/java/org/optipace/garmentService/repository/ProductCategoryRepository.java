@@ -12,21 +12,12 @@ import java.util.Optional;
 @Repository
 public interface ProductCategoryRepository extends JpaRepository<ProductCategory, Long> {
 
-    Page<ProductCategory> findByRecordStatus(String recordStatus, Pageable pageable);
+	Page<ProductCategory> findByRecordStatus(Character recordStatus, Pageable pageable);
 
-    Optional<ProductCategory> findByProductCategoryIdAndRecordStatus(
-            Long productCategoryId,
-            String recordStatus
-    );
+	Optional<ProductCategory> findByProductCategoryIdAndRecordStatus(Long productCategoryId, Character recordStatus);
 
-    boolean existsByCategoryCodeAndRecordStatus(
-            String categoryCode,
-            String recordStatus
-    );
+	boolean existsByCategoryCodeAndRecordStatus(String categoryCode, Character recordStatus);
 
-    boolean existsByCategoryCodeAndProductCategoryIdNotAndRecordStatus(
-            String categoryCode,
-            Long productCategoryId,
-            String recordStatus
-    );
+	boolean existsByCategoryCodeAndProductCategoryIdNotAndRecordStatus(String categoryCode, Long productCategoryId,
+			Character recordStatus);
 }
