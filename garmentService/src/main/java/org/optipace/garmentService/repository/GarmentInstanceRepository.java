@@ -37,4 +37,11 @@ public interface GarmentInstanceRepository extends JpaRepository<GarmentInstance
             String recordStatus,
             Pageable pageable
     );
+    
+    //new code changes in by Ganesh
+    Optional<GarmentInstance> findBySerialNumberAndRecordStatus(
+            String serialNumber, Character recordStatus);
+
+    Optional<GarmentInstance> findByGarmentInstanceIdAndRecordStatus(
+            UUID garmentInstanceId, Character recordStatus);
 }
