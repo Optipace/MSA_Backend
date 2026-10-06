@@ -102,28 +102,28 @@ public class AssessmentService {
         /*
          * Sequence enforcement
          */
-        List<AssessmentModuleInstance> modules =
-                assessmentModuleInstanceRepository
-                        .findByAssessmentAttemptAssessmentAttemptIdOrderBySequenceNo(
-                                moduleInstance.getAssessmentAttempt()
-                                        .getAssessmentAttemptId()
-                        );
-
-        for (AssessmentModuleInstance module : modules) {
-
-            if (module.getSequenceNo() < moduleInstance.getSequenceNo()) {
-
-                String status =
-                        module.getModuleStatus().getStatusCode();
-
-                if (!"COMPLETED".equals(status)) {
-
-                    throw new BadRequestException(
-                            "Previous assessment module must be completed first"
-                    );
-                }
-            }
-        }
+//        List<AssessmentModuleInstance> modules =
+//                assessmentModuleInstanceRepository
+//                        .findByAssessmentAttemptAssessmentAttemptIdOrderBySequenceNo(
+//                                moduleInstance.getAssessmentAttempt()
+//                                        .getAssessmentAttemptId()
+//                        );
+//
+//        for (AssessmentModuleInstance module : modules) {
+//
+//            if (module.getSequenceNo() < moduleInstance.getSequenceNo()) {
+//
+//                String status =
+//                        module.getModuleStatus().getStatusCode();
+//
+//                if (!"COMPLETED".equals(status)) {
+//
+//                    throw new BadRequestException(
+//                            "Previous assessment module must be completed first"
+//                    );
+//                }
+//            }
+//        }
 
         ModuleStatus inProgressStatus =
                 moduleStatusRepository
@@ -505,16 +505,16 @@ public class AssessmentService {
              * Only the first sequence is available initially.
              * All remaining sequences are locked.
              */
-            if (templateModule.getSequenceNo() == 1) {
-                moduleInstance.setModuleStatus(
-                        availableStatus
-                );
-            } else {
-                moduleInstance.setModuleStatus(
-                        lockedStatus
-                );
-            }
-
+//            if (templateModule.getSequenceNo() == 1) {
+//                moduleInstance.setModuleStatus(
+//                        availableStatus
+//                );
+//            } else {
+//                moduleInstance.setModuleStatus(
+//                        lockedStatus
+//                );
+//            }
+            moduleInstance.setModuleStatus(availableStatus);
             moduleInstance.setCreatedOn(now);
             moduleInstance.setAssessmentAttempt(attempt);
 
