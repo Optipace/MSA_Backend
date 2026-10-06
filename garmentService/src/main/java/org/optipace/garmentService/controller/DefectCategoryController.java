@@ -25,7 +25,7 @@ public class DefectCategoryController {
     private final DefectCategoryService defectCategoryService;
 
     @PostMapping("/v1/add")
-    @PreAuthorize("hasAuthority('SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'FACTORY_ADMIN')")
     public ResponseEntity<SingleResponse<?>> createDefectCategory(
             @Valid @RequestBody AddDefectCategoryRequest request,
             @RequestHeader("X-User-Id") String adminId) {
@@ -39,7 +39,7 @@ public class DefectCategoryController {
     }
 
     @GetMapping("/v1/all")
-    @PreAuthorize("hasAuthority('SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'FACTORY_ADMIN')")
     public ResponseEntity<
             SingleResponse<PageResponse<ListOfDefectCategoryResponse>>>
             getAllDefectCategories(
@@ -57,7 +57,7 @@ public class DefectCategoryController {
     }
 
     @GetMapping("/v1/{defectCategoryId}")
-    @PreAuthorize("hasAuthority('SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'FACTORY_ADMIN')")
     public ResponseEntity<SingleResponse<DefectCategoryResponse>>
             getDefectCategoryById(
                     @PathVariable Long defectCategoryId) {
@@ -70,7 +70,7 @@ public class DefectCategoryController {
     }
 
     @PatchMapping("/v1/update/{defectCategoryId}")
-    @PreAuthorize("hasAuthority('SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'FACTORY_ADMIN')")
     public ResponseEntity<SingleResponse<?>> updateDefectCategory(
             @PathVariable Long defectCategoryId,
             @Valid @RequestBody UpdateDefectCategoryRequest request,

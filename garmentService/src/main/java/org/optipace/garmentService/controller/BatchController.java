@@ -25,7 +25,7 @@ public class BatchController {
     private final BatchService batchService;
 
     @PostMapping("/v1/add")
-    @PreAuthorize("hasAuthority('SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'FACTORY_ADMIN')")
     public ResponseEntity<SingleResponse<?>> createBatch(
             @Valid @RequestBody AddBatchRequest request,
             @RequestHeader("X-User-Id") String adminId) {
@@ -36,7 +36,7 @@ public class BatchController {
     }
 
     @GetMapping("/v1/all")
-    @PreAuthorize("hasAuthority('SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'FACTORY_ADMIN')")
     public ResponseEntity<
             SingleResponse<PageResponse<ListOfBatchResponse>>>
             getAllBatches(
@@ -51,7 +51,7 @@ public class BatchController {
     }
 
     @GetMapping("/v1/{batchId:\\d+}")
-    @PreAuthorize("hasAuthority('SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'FACTORY_ADMIN')")
     public ResponseEntity<SingleResponse<BatchResponse>>
             getBatchById(@PathVariable Long batchId) {
 
@@ -61,7 +61,7 @@ public class BatchController {
     }
 
     @PatchMapping("/v1/update/{batchId:\\d+}")
-    @PreAuthorize("hasAuthority('SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'FACTORY_ADMIN')")
     public ResponseEntity<SingleResponse<?>> updateBatch(
             @PathVariable Long batchId,
             @Valid @RequestBody UpdateBatchRequest request,
@@ -73,7 +73,7 @@ public class BatchController {
     }
 
     @DeleteMapping("/v1/delete/{batchId:\\d+}")
-    @PreAuthorize("hasAuthority('SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'FACTORY_ADMIN')")
     public ResponseEntity<SingleResponse<?>> deleteBatchById(
             @PathVariable Long batchId,
             @RequestHeader("X-User-Id") String adminId) {

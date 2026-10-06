@@ -26,7 +26,7 @@ public class ProductCategoryController {
 	private final ProductCategoryService productCategoryService;
 
 	@PostMapping("/v1/add")
-	@PreAuthorize("hasAuthority('SUPER_ADMIN')")
+	@PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'FACTORY_ADMIN')")
 	public ResponseEntity<SingleResponse<?>> createProductCategory(
 			@Valid @RequestBody AddProductCategoryRequest request, @RequestHeader("X-User-Id") String adminId) {
 
@@ -34,7 +34,7 @@ public class ProductCategoryController {
 	}
 
 	@GetMapping("/v1/all")
-	@PreAuthorize("hasAuthority('SUPER_ADMIN')")
+	@PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'FACTORY_ADMIN')")
 	public ResponseEntity<SingleResponse<PageResponse<ListOfProductCategoryResponse>>> getAllProductCategories(
 			@RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "10") int size) {
 
@@ -44,7 +44,7 @@ public class ProductCategoryController {
 	}
 
 	@GetMapping("/v1/{productCategoryId}")
-	@PreAuthorize("hasAuthority('SUPER_ADMIN')")
+	@PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'FACTORY_ADMIN')")
 	public ResponseEntity<SingleResponse<ProductCategoryResponse>> getProductCategoryById(
 			@PathVariable Long productCategoryId) {
 
@@ -52,7 +52,7 @@ public class ProductCategoryController {
 	}
 
 	@PatchMapping("/v1/update/{productCategoryId}")
-	@PreAuthorize("hasAuthority('SUPER_ADMIN')")
+	@PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'FACTORY_ADMIN')")
 	public ResponseEntity<SingleResponse<?>> updateProductCategory(@PathVariable Long productCategoryId,
 			@Valid @RequestBody UpdateProductCategoryRequest request, @RequestHeader("X-User-Id") String adminId) {
 
@@ -60,7 +60,7 @@ public class ProductCategoryController {
 	}
 
 	@DeleteMapping("/v1/delete/{productCategoryId}")
-	@PreAuthorize("hasAuthority('SUPER_ADMIN')")
+	@PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'FACTORY_ADMIN')")
 	public ResponseEntity<SingleResponse<?>> deleteProductCategory(@PathVariable Long productCategoryId,
 			@RequestHeader("X-User-Id") String adminId) {
 

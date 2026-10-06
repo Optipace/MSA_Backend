@@ -25,7 +25,7 @@ public class GarmentTypeController {
     private final GarmentTypeService garmentTypeService;
 
     @PostMapping("/v1/add")
-    @PreAuthorize("hasAuthority('SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'FACTORY_ADMIN')")
     public ResponseEntity<SingleResponse<?>> createGarmentType(
             @Valid @RequestBody AddGarmentTypeRequest request,
             @RequestHeader("X-User-Id") String adminId) {
@@ -39,7 +39,7 @@ public class GarmentTypeController {
     }
 
     @GetMapping("/v1/all")
-    @PreAuthorize("hasAuthority('SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'FACTORY_ADMIN')")
     public ResponseEntity<SingleResponse<PageResponse<ListOfGarmentTypeResponse>>> getAllGarmentTypes(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
@@ -52,7 +52,7 @@ public class GarmentTypeController {
     }
 
     @GetMapping("/v1/{garmentTypeId}")
-    @PreAuthorize("hasAuthority('SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'FACTORY_ADMIN')")
     public ResponseEntity<SingleResponse<GarmentTypeResponse>> getGarmentTypeById(
             @PathVariable Long garmentTypeId) {
 
@@ -64,7 +64,7 @@ public class GarmentTypeController {
     }
 
     @PatchMapping("/v1/update/{garmentTypeId}")
-    @PreAuthorize("hasAuthority('SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'FACTORY_ADMIN')")
     public ResponseEntity<SingleResponse<?>> updateGarmentType(
             @PathVariable Long garmentTypeId,
             @Valid @RequestBody UpdateGarmentTypeRequest request,
@@ -80,7 +80,7 @@ public class GarmentTypeController {
     }
 
     @DeleteMapping("/v1/delete/{garmentTypeId}")
-    @PreAuthorize("hasAuthority('SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'FACTORY_ADMIN')")
     public ResponseEntity<SingleResponse<?>> deleteGarmentTypeById(
             @PathVariable Long garmentTypeId,
             @RequestHeader("X-User-Id") String adminId) {

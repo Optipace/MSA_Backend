@@ -25,7 +25,7 @@ public class DefectMasterController {
     private final DefectMasterService defectMasterService;
 
     @PostMapping("/v1/add")
-    @PreAuthorize("hasAuthority('SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'FACTORY_ADMIN')")
     public ResponseEntity<SingleResponse<?>> createDefectMaster(
             @Valid @RequestBody AddDefectMasterRequest request,
             @RequestHeader("X-User-Id") String adminId) {
@@ -39,7 +39,7 @@ public class DefectMasterController {
     }
 
     @GetMapping("/v1/all")
-    @PreAuthorize("hasAuthority('SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'FACTORY_ADMIN')")
     public ResponseEntity<
             SingleResponse<PageResponse<ListOfDefectMasterResponse>>>
             getAllDefectMasters(
@@ -57,7 +57,7 @@ public class DefectMasterController {
     }
 
     @GetMapping("/v1/{defectId}")
-    @PreAuthorize("hasAuthority('SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'FACTORY_ADMIN')")
     public ResponseEntity<SingleResponse<DefectMasterResponse>>
             getDefectMasterById(
                     @PathVariable Long defectId) {
@@ -70,7 +70,7 @@ public class DefectMasterController {
     }
 
     @PatchMapping("/v1/update/{defectId}")
-    @PreAuthorize("hasAuthority('SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'FACTORY_ADMIN')")
     public ResponseEntity<SingleResponse<?>> updateDefectMaster(
             @PathVariable Long defectId,
             @Valid @RequestBody UpdateDefectMasterRequest request,

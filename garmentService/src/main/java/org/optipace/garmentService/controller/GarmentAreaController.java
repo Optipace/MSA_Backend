@@ -25,7 +25,7 @@ public class GarmentAreaController {
     private final GarmentAreaService garmentAreaService;
 
     @PostMapping("/v1/add")
-    @PreAuthorize("hasAuthority('SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'FACTORY_ADMIN')")
     public ResponseEntity<SingleResponse<?>> createGarmentArea(
             @Valid @RequestBody AddGarmentAreaRequest request,
             @RequestHeader("X-User-Id") String adminId) {
@@ -39,7 +39,7 @@ public class GarmentAreaController {
     }
 
     @GetMapping("/v1/all")
-    @PreAuthorize("hasAuthority('SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'FACTORY_ADMIN')")
     public ResponseEntity<
             SingleResponse<PageResponse<ListOfGarmentAreaResponse>>>
             getAllGarmentAreas(
@@ -57,7 +57,7 @@ public class GarmentAreaController {
     }
 
     @GetMapping("/v1/{garmentAreaId}")
-    @PreAuthorize("hasAuthority('SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'FACTORY_ADMIN')")
     public ResponseEntity<SingleResponse<GarmentAreaResponse>>
             getGarmentAreaById(
                     @PathVariable Long garmentAreaId) {
@@ -70,7 +70,7 @@ public class GarmentAreaController {
     }
 
     @PatchMapping("/v1/update/{garmentAreaId}")
-    @PreAuthorize("hasAuthority('SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'FACTORY_ADMIN')")
     public ResponseEntity<SingleResponse<?>> updateGarmentArea(
             @PathVariable Long garmentAreaId,
             @Valid @RequestBody UpdateGarmentAreaRequest request,

@@ -30,11 +30,13 @@ public class GarmentInstanceController {
     }
 
     @GetMapping("/v1/{serialNumber}")
+    @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'FACTORY_ADMIN')")
     public ResponseEntity<SingleResponse<?>> getGarmentInstance(@PathVariable String serialNumber) {
         return ResponseEntity.ok(garmentInstanceService.getGarmentInstance(serialNumber));
     }
 
     @GetMapping("/v1")
+    @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'FACTORY_ADMIN')")
     public ResponseEntity<SingleResponse<?>> getAllGarmentInstances(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
@@ -46,6 +48,7 @@ public class GarmentInstanceController {
     }
 
     @PatchMapping("/v1/{serialNumber}")
+    @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'FACTORY_ADMIN')")
     public ResponseEntity<SingleResponse<?>> updateGarmentInstance(
             @PathVariable String serialNumber,
             @Valid @RequestBody GarmentInstanceUpdateRequest request,
@@ -54,6 +57,7 @@ public class GarmentInstanceController {
     }
 
     @DeleteMapping("/v1/{serialNumber}")
+    @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'FACTORY_ADMIN')")
     public ResponseEntity<SingleResponse<?>> deleteGarmentInstance(
             @PathVariable String serialNumber,
             @RequestHeader(value = "X-User-Id", required = false) String userId) {
