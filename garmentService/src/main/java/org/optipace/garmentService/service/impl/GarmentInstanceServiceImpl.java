@@ -151,7 +151,7 @@ public class GarmentInstanceServiceImpl implements GarmentInstanceService {
                 parseUserId(userId)
         );
 
-        garmentInstance.setRecordStatus("A");
+        garmentInstance.setRecordStatus('A');
 
 
         // -----------------------------------------------------
@@ -422,7 +422,7 @@ public class GarmentInstanceServiceImpl implements GarmentInstanceService {
                 !request.getRecordStatus().isBlank()) {
 
             garmentInstance.setRecordStatus(
-                    request.getRecordStatus()
+                    request.getRecordStatus().charAt(0)
             );
         }
 
@@ -480,7 +480,8 @@ public class GarmentInstanceServiceImpl implements GarmentInstanceService {
         // Soft Delete
         // -----------------------------------------------------
 
-        garmentInstance.setRecordStatus("I");
+        garmentInstance.setRecordStatus('I');
+
 
         garmentInstance.setUpdatedBy(
                 parseUserId(userId)

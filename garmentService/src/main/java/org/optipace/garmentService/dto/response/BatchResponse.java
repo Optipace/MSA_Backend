@@ -9,11 +9,16 @@ import java.time.OffsetDateTime;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class DefectCategoryResponseDTO {
-    private Long defectCategoryId;
-    private String categoryCode;
-    private String categoryName;
+public class BatchResponse {
+
+    private Long batchId;
+    private String batchName;
+    private String batchCode;
     private String description;
     private Integer displayOrder;
+    private String recordStatus;
+    private String createdBy;
+    private String updatedBy;
     private OffsetDateTime createdOn;
+    private OffsetDateTime updatedOn;
 }

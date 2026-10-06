@@ -3,13 +3,13 @@ package org.optipace.garmentService.controller;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
-import org.optipace.garmentService.dto.request.AddDefectCategoryRequest;
-import org.optipace.garmentService.dto.request.UpdateDefectCategoryRequest;
-import org.optipace.garmentService.dto.response.DefectCategoryResponse;
-import org.optipace.garmentService.dto.response.ListOfDefectCategoryResponse;
+import org.optipace.garmentService.dto.request.AddDefectMasterRequest;
+import org.optipace.garmentService.dto.request.UpdateDefectMasterRequest;
+import org.optipace.garmentService.dto.response.DefectMasterResponse;
+import org.optipace.garmentService.dto.response.ListOfDefectMasterResponse;
 import org.optipace.garmentService.dto.response.PageResponse;
 import org.optipace.garmentService.dto.response.SingleResponse;
-import org.optipace.garmentService.service.DefectCategoryService;
+import org.optipace.garmentService.service.DefectMasterService;
 
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -18,20 +18,20 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/defectCategory")
+@RequestMapping("/defectMaster")
 @RequiredArgsConstructor
-public class DefectCategoryController {
+public class DefectMasterController {
 
-    private final DefectCategoryService defectCategoryService;
+    private final DefectMasterService defectMasterService;
 
     @PostMapping("/v1/add")
     @PreAuthorize("hasAuthority('SUPER_ADMIN')")
-    public ResponseEntity<SingleResponse<?>> createDefectCategory(
-            @Valid @RequestBody AddDefectCategoryRequest request,
+    public ResponseEntity<SingleResponse<?>> createDefectMaster(
+            @Valid @RequestBody AddDefectMasterRequest request,
             @RequestHeader("X-User-Id") String adminId) {
 
         return ResponseEntity.ok(
-                defectCategoryService.createDefectCategory(
+                defectMasterService.createDefectMaster(
                         request,
                         adminId
                 )
@@ -41,8 +41,8 @@ public class DefectCategoryController {
     @GetMapping("/v1/all")
     @PreAuthorize("hasAuthority('SUPER_ADMIN')")
     public ResponseEntity<
-            SingleResponse<PageResponse<ListOfDefectCategoryResponse>>>
-            getAllDefectCategories(
+            SingleResponse<PageResponse<ListOfDefectMasterResponse>>>
+            getAllDefectMasters(
                     @RequestParam(defaultValue = "0") int page,
                     @RequestParam(defaultValue = "10") int size) {
 
@@ -50,50 +50,50 @@ public class DefectCategoryController {
                 PageRequest.of(page, size);
 
         return ResponseEntity.ok(
-                defectCategoryService.getAllDefectCategories(
+                defectMasterService.getAllDefectMasters(
                         pageable
                 )
         );
     }
 
-    @GetMapping("/v1/{defectCategoryId}")
+    @GetMapping("/v1/{defectId}")
     @PreAuthorize("hasAuthority('SUPER_ADMIN')")
-    public ResponseEntity<SingleResponse<DefectCategoryResponse>>
-            getDefectCategoryById(
-                    @PathVariable Long defectCategoryId) {
+    public ResponseEntity<SingleResponse<DefectMasterResponse>>
+            getDefectMasterById(
+                    @PathVariable Long defectId) {
 
         return ResponseEntity.ok(
-                defectCategoryService.getDefectCategoryById(
-                        defectCategoryId
+                defectMasterService.getDefectMasterById(
+                        defectId
                 )
         );
     }
 
-    @PatchMapping("/v1/update/{defectCategoryId}")
+    @PatchMapping("/v1/update/{defectId}")
     @PreAuthorize("hasAuthority('SUPER_ADMIN')")
-    public ResponseEntity<SingleResponse<?>> updateDefectCategory(
-            @PathVariable Long defectCategoryId,
-            @Valid @RequestBody UpdateDefectCategoryRequest request,
+    public ResponseEntity<SingleResponse<?>> updateDefectMaster(
+            @PathVariable Long defectId,
+            @Valid @RequestBody UpdateDefectMasterRequest request,
             @RequestHeader("X-User-Id") String adminId) {
 
         return ResponseEntity.ok(
-                defectCategoryService.updateDefectCategory(
-                        defectCategoryId,
+                defectMasterService.updateDefectMaster(
+                        defectId,
                         request,
                         adminId
                 )
         );
     }
 
-//    @DeleteMapping("/v1/delete/{defectCategoryId}")
+//    @DeleteMapping("/v1/delete/{defectId}")
 //    @PreAuthorize("hasAuthority('SUPER_ADMIN')")
-//    public ResponseEntity<SingleResponse<?>> deleteDefectCategoryById(
-//            @PathVariable Long defectCategoryId,
+//    public ResponseEntity<SingleResponse<?>> deleteDefectMasterById(
+//            @PathVariable Long defectId,
 //            @RequestHeader("X-User-Id") String adminId) {
 //
 //        return ResponseEntity.ok(
-//                defectCategoryService.deleteDefectCategoryById(
-//                        defectCategoryId,
+//                defectMasterService.deleteDefectMasterById(
+//                        defectId,
 //                        adminId
 //                )
 //        );

@@ -41,6 +41,9 @@ public class GarmentInstance {
     @Column(name = "qr_code", length = 100)
     private String qrCode;
     
+    @Column(name = "batch_id")
+    private Long batchId;
+    
     @Column(name = "barcode", length = 100)
     private String barcode;
     
@@ -77,7 +80,9 @@ public class GarmentInstance {
     
     // ⚠️ Must be char(1) — NOT varchar(1)
     @Column(name = "record_status", columnDefinition = "char(1)")
-    private String recordStatus = "A";
+   // private String recordStatus = "A";
+    private Character recordStatus = 'A';
+
     
     // ===== FK: garment_lot =====
     @Column(name = "garment_lot_id", nullable = false)

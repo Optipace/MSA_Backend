@@ -12,7 +12,7 @@ import java.util.UUID;
 @Repository
 public interface GarmentLotRepository extends JpaRepository<GarmentLot, UUID> {
 
-    Page<GarmentLot> findByRecordStatus(String recordStatus, Pageable pageable);
+    Page<GarmentLot> findByRecordStatus(Character recordStatus, Pageable pageable);
 
     boolean existsByLotNumber(String lotNumber);
 

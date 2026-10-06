@@ -4,10 +4,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.optipace.masterService.dto.request.AddCityRequest;
 import org.optipace.masterService.dto.request.UpdateCityRequest;
-import org.optipace.masterService.dto.response.CityResponse;
-import org.optipace.masterService.dto.response.ListOfCityResponse;
-import org.optipace.masterService.dto.response.PageResponse;
-import org.optipace.masterService.dto.response.SingleResponse;
+import org.optipace.masterService.dto.response.*;
 import org.optipace.masterService.service.CityService;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -25,18 +22,33 @@ public class CityController {
     @PostMapping("/v1/add")
     @PreAuthorize("hasAuthority('SUPER_ADMIN')")
     public ResponseEntity<SingleResponse<?>> createCity(
-    		@Valid @RequestBody AddCityRequest request, 
-    		@RequestHeader("X-User-Id") String adminId) {
-        return ResponseEntity.ok(cityService.createCity(request, adminId));        
+            @Valid @RequestBody AddCityRequest request,
+            @RequestHeader("X-User-Id") String adminId
+    ) {
+
+        return ResponseEntity.ok(
+                cityService.createCity(
+                        request,
+                        adminId
+                )
+        );
     }
 
     @GetMapping("/v1/all")
     @PreAuthorize("hasAuthority('SUPER_ADMIN')")
-    public ResponseEntity<SingleResponse<PageResponse<ListOfCityResponse>>> getAllCity(
+    public ResponseEntity<
+            SingleResponse<PageResponse<ListOfCityResponse>>
+            > getAllCity(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
-        Pageable pageable = PageRequest.of(page, size);
-        return ResponseEntity.ok(cityService.getAllCity(pageable));        
+            @RequestParam(defaultValue = "10") int size
+    ) {
+
+        Pageable pageable =
+                PageRequest.of(page, size);
+
+        return ResponseEntity.ok(
+                cityService.getAllCity(pageable)
+        );
     }
 
     @PatchMapping("/v1/update/{cityId}")
@@ -44,23 +56,41 @@ public class CityController {
     public ResponseEntity<SingleResponse<?>> updateCity(
             @PathVariable Long cityId,
             @Valid @RequestBody UpdateCityRequest request,
-            @RequestHeader("X-User-Id") String adminId) {
-        return ResponseEntity.ok(cityService.updateCity(cityId, request, adminId));        
+            @RequestHeader("X-User-Id") String adminId
+    ) {
+
+        return ResponseEntity.ok(
+                cityService.updateCity(
+                        cityId,
+                        request,
+                        adminId
+                )
+        );
     }
 
     @GetMapping("/v1/{cityId}")
     @PreAuthorize("hasAuthority('SUPER_ADMIN')")
-    public ResponseEntity<SingleResponse<CityResponse>> getCityById(@PathVariable Long cityId) {
-        return ResponseEntity.ok(cityService.getCityById(cityId));
+    public ResponseEntity<SingleResponse<CityResponse>> getCityById(
+            @PathVariable Long cityId
+    ) {
+
+        return ResponseEntity.ok(
+                cityService.getCityById(cityId)
+        );
     }
 
     @DeleteMapping("/v1/delete/{cityId}")
     @PreAuthorize("hasAuthority('SUPER_ADMIN')")
     public ResponseEntity<SingleResponse<?>> deleteCityById(
             @PathVariable Long cityId,
-            @RequestHeader("X-User-Id") String adminId) {
-        return ResponseEntity.ok(cityService.deleteCityById(cityId, adminId));        
+            @RequestHeader("X-User-Id") String adminId
+    ) {
+
+        return ResponseEntity.ok(
+                cityService.deleteCityById(
+                        cityId,
+                        adminId
+                )
+        );
     }
 }
-
-
