@@ -10,7 +10,7 @@
         <module name="api-gateway" />
         <module name="eureka-server" />
       </profile>
-      <profile name="Annotation profile for assessmentService" enabled="true">
+      <profile name="Annotation profile for msa-service" enabled="true">
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
@@ -20,9 +20,10 @@
         </processorPath>
         <module name="masterService" />
         <module name="authService" />
+        <module name="msa-service" />
         <module name="assessmentService" />
       </profile>
-      <profile name="Annotation profile for msa-service" enabled="true">
+      <profile name="Annotation profile for garmentService" enabled="true">
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
@@ -30,7 +31,6 @@
           <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.46/lombok-1.18.46.jar" />
         </processorPath>
         <module name="garmentService" />
-        <module name="msa-service" />
       </profile>
     </annotationProcessing>
   </component>

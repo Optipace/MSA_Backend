@@ -30,6 +30,9 @@ public class AssessmentModule {
     @Column(name = "display_order")
     private Integer displayOrder;
 
+    @Column(name = "duration_minutes")
+    private Integer durationMinutes;
+
     @Column(name = "is_scored")
     private Boolean isScored;
 
@@ -44,5 +47,5 @@ public class AssessmentModule {
 
     @JdbcTypeCode(Types.CHAR)
     @Column(name = "record_status")
-    private String recordStatus;
+    private char recordStatus;
 }
