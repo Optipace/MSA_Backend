@@ -148,15 +148,15 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(err, HttpStatus.BAD_REQUEST);
     }
 
-    @ExceptionHandler(MicroserviceException.class)
-    public ResponseEntity<SingleResponse<?>> handleMicroserviceIntegrationException(MicroserviceException ex) {
-        // Return the exact status code that the authService originally threw
-        return ResponseEntity.status(ex.getStatusCode())
-                .body(new SingleResponse<>(
-                        null,
-                        new Response(ex.getStatusCode(), ex.getMessage()) // Assuming you have a Response object for errors
-                ));
-    }
+//    @ExceptionHandler(MicroserviceException.class)
+//    public ResponseEntity<SingleResponse<?>> handleMicroserviceIntegrationException(MicroserviceException ex) {
+//        // Return the exact status code that the authService originally threw
+//        return ResponseEntity.status(ex.getStatusCode())
+//                .body(new SingleResponse<>(
+//                        null,
+//                        new Response(ex.getStatusCode(), ex.getMessage()) // Assuming you have a Response object for errors
+//                ));
+//    }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleException(Exception ex) {
