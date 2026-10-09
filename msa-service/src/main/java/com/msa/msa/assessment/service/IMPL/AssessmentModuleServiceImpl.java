@@ -1,13 +1,11 @@
 package com.msa.msa.assessment.service.IMPL;
 
-import com.msa.msa.assessment.dto.AssessmentModuleRequest;
-import com.msa.msa.assessment.dto.AssessmentModuleResponse;
-import com.msa.msa.assessment.dto.PageResponse;
-import com.msa.msa.assessment.dto.SingleResponse;
+import com.msa.msa.assessment.dto.*;
 import com.msa.msa.assessment.entity.AssessmentModule;
 import com.msa.msa.assessment.enums.CustomStatus;
 import com.msa.msa.assessment.repository.AssessmentModuleRepository;
 import com.msa.msa.assessment.service.AssessmentModuleService;
+import com.msa.msa.common.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -25,14 +23,22 @@ public class AssessmentModuleServiceImpl implements AssessmentModuleService {
     private final AssessmentModuleRepository assessmentModuleRepository;
 
     @Override
-    public SingleResponse<?> createModule(AssessmentModuleRequest request, String adminId) {
+    public SingleResponse<?> createModule(AssessmentModuleRequest request) {
+
+        if (assessmentModuleRepository.existsByModuleCodeAndRecordStatus(request.getModuleCode(), 'A')) {
+            return new SingleResponse<>("Module code already exists: " + request.getModuleCode(), CustomStatus.FAILURE);
+        }
+
         AssessmentModule module = new AssessmentModule();
         mapRequestToEntity(request, module);
+        Integer maxDisplayOrder = assessmentModuleRepository.findMaxDisplayOrder();
 
+        module.setDisplayOrder(maxDisplayOrder + 1);
         module.setCreatedOn(OffsetDateTime.now());
-        module.setRecordStatus('A'); // Assuming 'A' stands for Active
+        module.setRecordStatus('A');
 
         assessmentModuleRepository.save(module);
+
         return new SingleResponse<>("Assessment Module created successfully", CustomStatus.SUCCESS);
     }
 
@@ -55,19 +61,46 @@ public class AssessmentModuleServiceImpl implements AssessmentModuleService {
 
     @Override
     public SingleResponse<AssessmentModuleResponse> getModuleById(Long moduleId) {
-        AssessmentModule module = assessmentModuleRepository.findById(moduleId).orElseThrow(() -> new RuntimeException("Assessment Module not found with id: " + moduleId));
+
+        AssessmentModule module = assessmentModuleRepository.findById(moduleId)
+                .orElseThrow(() -> new ResourceNotFoundException("ModuleId not found with Id: " + moduleId));
 
         return new SingleResponse<>(mapEntityToResponse(module), CustomStatus.SUCCESS);
     }
 
     @Override
-    public SingleResponse<?> updateModule(Long moduleId, AssessmentModuleRequest request, String adminId) {
-        AssessmentModule module = assessmentModuleRepository.findById(moduleId).orElseThrow(() -> new RuntimeException("Assessment Module not found with id: " + moduleId));
+    public SingleResponse<?> updateModule(Long moduleId, AssessmentModuleUpdateRequest request) {
 
-        mapRequestToEntity(request, module);
+        AssessmentModule module = assessmentModuleRepository.findById(moduleId).orElseThrow(() -> new ResourceNotFoundException("Assessment Module not found with id: " + moduleId));
+
+        // Update only fields which are provided in request
+        if (request.getModuleCode() != null) {
+            module.setModuleCode(request.getModuleCode());
+        }
+
+        if (request.getModuleName() != null) {
+            module.setModuleName(request.getModuleName());
+        }
+
+        if (request.getDescription() != null) {
+            module.setDescription(request.getDescription());
+        }
+
+        if (request.getDurationMinutes() != null) {
+            module.setDurationMinutes(request.getDurationMinutes());
+        }
+
+        if (request.getIsScored() != null) {
+            module.setIsScored(request.getIsScored());
+        }
+
+        if (request.getIsMandatory() != null) {
+            module.setIsMandatory(request.getIsMandatory());
+        }
+
         module.setUpdatedOn(OffsetDateTime.now());
-
         assessmentModuleRepository.save(module);
+
         return new SingleResponse<>("Assessment Module updated successfully", CustomStatus.SUCCESS);
     }
 
@@ -91,12 +124,11 @@ public class AssessmentModuleServiceImpl implements AssessmentModuleService {
         return new SingleResponse<>("Assessment Module deleted successfully", CustomStatus.SUCCESS);
     }
 
-
     private void mapRequestToEntity(AssessmentModuleRequest request, AssessmentModule module) {
         module.setModuleCode(request.getModuleCode());
         module.setModuleName(request.getModuleName());
+        module.setAssessmentType(request.getAssessmentType());
         module.setDescription(request.getDescription());
-        module.setDisplayOrder(request.getDisplayOrder());
         module.setDurationMinutes(request.getDurationMinutes());
         module.setIsScored(request.getIsScored());
         module.setIsMandatory(request.getIsMandatory());
@@ -115,6 +147,7 @@ public class AssessmentModuleServiceImpl implements AssessmentModuleService {
         response.setCreatedOn(module.getCreatedOn());
         response.setUpdatedOn(module.getUpdatedOn());
         response.setRecordStatus(module.getRecordStatus());
+        response.setAssessmentType(module.getAssessmentType());
         return response;
     }
 }

@@ -24,6 +24,9 @@ public class AssessmentModule {
     @Column(name = "module_name", nullable = false, length = 100)
     private String moduleName;
 
+    @Column(name = "assessment_type", length = 100)
+    private String assessmentType;
+
     @Column(name = "description")
     private String description;
 

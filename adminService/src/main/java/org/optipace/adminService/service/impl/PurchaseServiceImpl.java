@@ -1,4 +1,4 @@
-package org.optipace.adminService.service;
+package org.optipace.adminService.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -18,7 +18,6 @@ import org.optipace.adminService.exception.BadRequestException;
 import org.optipace.adminService.exception.ResourceNotFoundException;
 import org.optipace.adminService.repository.*;
 import org.optipace.adminService.service.PurchaseService;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 

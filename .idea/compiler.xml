@@ -23,7 +23,7 @@
         <module name="msa-service" />
         <module name="assessmentService" />
       </profile>
-      <profile name="Annotation profile for garmentService" enabled="true">
+      <profile name="Annotation profile for adminService" enabled="true">
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
@@ -31,11 +31,13 @@
           <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.46/lombok-1.18.46.jar" />
         </processorPath>
         <module name="garmentService" />
+        <module name="adminService" />
       </profile>
     </annotationProcessing>
   </component>
   <component name="JavacSettings">
     <option name="ADDITIONAL_OPTIONS_OVERRIDE">
+      <module name="adminService" options="-parameters" />
       <module name="api-gateway" options="-parameters" />
       <module name="assessmentService" options="-parameters" />
       <module name="authService" options="-parameters" />

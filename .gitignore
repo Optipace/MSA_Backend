@@ -1,3 +1,6 @@
 # Ignore local configuration files
 authService/src/main/resources/application-dev.properties
 msa-service/src/main/resources/application-dev.properties
+apiGateway/src/main/resources/application-dev.properties
+masterService/src/main/resources/application-dev.properties
+adminService/src/main/resources/application-dev.properties
