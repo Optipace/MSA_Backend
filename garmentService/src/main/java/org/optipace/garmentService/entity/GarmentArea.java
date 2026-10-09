@@ -46,17 +46,17 @@ public class GarmentArea {
     @Column(name = "display_order")
     private Integer displayOrder;
     
-    @Column(name = "x_coordinate", precision = 10, scale = 2)
-    private BigDecimal xCoordinate;
-    
-    @Column(name = "y_coordinate", precision = 10, scale = 2)
-    private BigDecimal yCoordinate;
-    
-    @Column(name = "width", precision = 10, scale = 2)
-    private BigDecimal width;
-    
-    @Column(name = "height", precision = 10, scale = 2)
-    private BigDecimal height;
+//    @Column(name = "x_coordinate", precision = 10, scale = 2)
+//    private BigDecimal xCoordinate;
+//    
+//    @Column(name = "y_coordinate", precision = 10, scale = 2)
+//    private BigDecimal yCoordinate;
+//    
+//    @Column(name = "width", precision = 10, scale = 2)
+//    private BigDecimal width;
+//    
+//    @Column(name = "height", precision = 10, scale = 2)
+//    private BigDecimal height;
     
     @CreationTimestamp
     @Column(name = "created_on", updatable = false)

@@ -31,6 +31,7 @@ public class GarmentType {
     @Column(name = "product_category_id", nullable = false)
     private Long productCategoryId;
     
+    
     // ===== CORE FIELDS =====
     @Column(name = "garment_code", length = 30, nullable = false)
     private String garmentCode;

@@ -639,7 +639,7 @@ public class AssessmentService {
                 break;
             }
         }
-
+ 
         // 6. Return response
         return new AssessmentProgressResponse(
                 session.getAssessmentSessionId(),

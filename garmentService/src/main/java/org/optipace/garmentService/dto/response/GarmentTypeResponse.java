@@ -10,7 +10,7 @@ import lombok.NoArgsConstructor;
 public class GarmentTypeResponse {
 
     private Long garmentTypeId;
-
+    
     private Long productCategoryId;
 
     private String garmentCode;
@@ -18,4 +18,5 @@ public class GarmentTypeResponse {
     private String garmentName;
 
     private String description;
+    
 }

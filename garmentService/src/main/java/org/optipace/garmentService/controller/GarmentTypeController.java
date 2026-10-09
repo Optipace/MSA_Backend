@@ -89,7 +89,7 @@ public class GarmentTypeController {
                 garmentTypeService.deleteGarmentTypeById(
                         garmentTypeId,
                         adminId
-                )
+                )    
         );
     }
 }
