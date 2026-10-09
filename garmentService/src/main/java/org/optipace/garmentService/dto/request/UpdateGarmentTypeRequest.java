@@ -24,4 +24,5 @@ public class UpdateGarmentTypeRequest {
     private String description;
 
     private String remarks;
+    
 }

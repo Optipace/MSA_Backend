@@ -113,7 +113,8 @@ public class GarmentTypeServiceImpl implements GarmentTypeService {
 		Page<GarmentType> garmentTypePage = garmentTypeRepository.findByRecordStatus('A', sortedPageable);
 
 		List<ListOfGarmentTypeResponse> responseList = garmentTypePage.getContent().stream()
-				.map(garmentType -> new ListOfGarmentTypeResponse(garmentType.getGarmentTypeId(),
+				.map(garmentType -> new ListOfGarmentTypeResponse
+						(garmentType.getGarmentTypeId(),
 						garmentType.getProductCategoryId(), garmentType.getGarmentCode(), garmentType.getGarmentName(),
 						garmentType.getDescription()))
 				.toList();
