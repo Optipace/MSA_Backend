@@ -1,4 +1,5 @@
 package com.msa.msa.assessment.dto;
+import jakarta.validation.constraints.NotBlank;
 import lombok.Getter;
 import lombok.Setter;
 import java.time.OffsetDateTime;
@@ -17,4 +18,5 @@ public class AssessmentModuleResponse {
     private OffsetDateTime createdOn;
     private OffsetDateTime updatedOn;
     private char recordStatus;
+    private String assessmentType;
 }

@@ -127,6 +127,7 @@ public class AssessmentModuleServiceImpl implements AssessmentModuleService {
     private void mapRequestToEntity(AssessmentModuleRequest request, AssessmentModule module) {
         module.setModuleCode(request.getModuleCode());
         module.setModuleName(request.getModuleName());
+        module.setAssessmentType(request.getAssessmentType());
         module.setDescription(request.getDescription());
         module.setDurationMinutes(request.getDurationMinutes());
         module.setIsScored(request.getIsScored());
@@ -146,6 +147,7 @@ public class AssessmentModuleServiceImpl implements AssessmentModuleService {
         response.setCreatedOn(module.getCreatedOn());
         response.setUpdatedOn(module.getUpdatedOn());
         response.setRecordStatus(module.getRecordStatus());
+        response.setAssessmentType(module.getAssessmentType());
         return response;
     }
 }

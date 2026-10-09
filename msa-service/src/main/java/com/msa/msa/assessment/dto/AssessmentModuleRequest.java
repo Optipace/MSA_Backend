@@ -29,4 +29,7 @@ public class AssessmentModuleRequest {
 
     @NotNull(message = "Is mandatory is required")
     private Boolean isMandatory;
+
+    @NotBlank(message = "Assessment type is required")
+    private String assessmentType;
 }
