@@ -379,15 +379,20 @@ public class AssessmentService {
     public CreateAssessmentResponse createAssessment(
             CreateAssessmentRequest request
     ) {
-
         // 1. Validate employee
         Employee employee = employeeRepository
                 .findById(request.getEmployeeId())
                 .orElseThrow(() ->
                         new RuntimeException("Employee not found")
                 );
+        String status=employee.getRecordStatus();
+       
 
-        if (!"A".equals(employee.getRecordStatus())) {
+//        if (!"A".equals(employee.getRecordStatus())) {
+//            throw new RuntimeException("Employee is not active");
+//        }
+        if (employee.getRecordStatus() == null ||
+                !"A".equals(employee.getRecordStatus().trim())) {
             throw new RuntimeException("Employee is not active");
         }
 
@@ -398,7 +403,7 @@ public class AssessmentService {
                         new RuntimeException("Assessment template not found")
                 );
 
-        if (!"A".equals(template.getRecordStatus())) {
+        if (!"A".equals(template.getRecordStatus().trim())) {
             throw new RuntimeException("Assessment template is not active");
         }
 
@@ -454,7 +459,7 @@ public class AssessmentService {
         session.setUpdatedOn(now);
         session.setVersionNo(1);
         session.setRecordStatus("A");
-        session.setAssignedBy(1L);
+        session.setAssignedBy(request.getEmployeeId());
 
         assessmentSessionRepository.save(session);
 
