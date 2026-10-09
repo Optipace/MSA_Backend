@@ -106,21 +106,21 @@ public class GarmentAreaServiceImpl implements GarmentAreaService {
                 request.getDisplayOrder()
         );
 
-        garmentArea.setXCoordinate(
-                request.getXCoordinate()
-        );
-
-        garmentArea.setYCoordinate(
-                request.getYCoordinate()
-        );
-
-        garmentArea.setWidth(
-                request.getWidth()
-        );
-
-        garmentArea.setHeight(
-                request.getHeight()
-        );
+//        garmentArea.setXCoordinate(
+//                request.getXCoordinate()
+//        );
+//
+//        garmentArea.setYCoordinate(
+//                request.getYCoordinate()
+//        );
+//
+//        garmentArea.setWidth(
+//                request.getWidth()
+//        );
+//
+//        garmentArea.setHeight(
+//                request.getHeight()
+//        );
 
         GarmentArea saved =
                 garmentAreaRepository.save(garmentArea);
@@ -166,11 +166,11 @@ public class GarmentAreaServiceImpl implements GarmentAreaService {
                                         garmentArea.getGarmentTypeId(),
                                         garmentArea.getAreaCode(),
                                         garmentArea.getAreaName(),
-                                        garmentArea.getDisplayOrder(),
-                                        garmentArea.getXCoordinate(),
-                                        garmentArea.getYCoordinate(),
-                                        garmentArea.getWidth(),
-                                        garmentArea.getHeight()
+                                        garmentArea.getDisplayOrder()
+//                                        garmentArea.getXCoordinate(),
+//                                        garmentArea.getYCoordinate(),
+//                                        garmentArea.getWidth(),
+//                                        garmentArea.getHeight()
                                 )
                         )
                         .toList();
@@ -295,21 +295,21 @@ public class GarmentAreaServiceImpl implements GarmentAreaService {
                 request.getDisplayOrder()
         );
 
-        garmentArea.setXCoordinate(
-                request.getXCoordinate()
-        );
-
-        garmentArea.setYCoordinate(
-                request.getYCoordinate()
-        );
-
-        garmentArea.setWidth(
-                request.getWidth()
-        );
-
-        garmentArea.setHeight(
-                request.getHeight()
-        );
+//        garmentArea.setXCoordinate(
+//                request.getXCoordinate()
+//        );
+//
+//        garmentArea.setYCoordinate(
+//                request.getYCoordinate()
+//        );
+//
+//        garmentArea.setWidth(
+//                request.getWidth()
+//        );
+//
+//        garmentArea.setHeight(
+//                request.getHeight()
+//        );
 
         garmentAreaRepository.save(garmentArea);
 
@@ -364,11 +364,11 @@ public class GarmentAreaServiceImpl implements GarmentAreaService {
                 garmentArea.getGarmentTypeId(),
                 garmentArea.getAreaCode(),
                 garmentArea.getAreaName(),
-                garmentArea.getDisplayOrder(),
-                garmentArea.getXCoordinate(),
-                garmentArea.getYCoordinate(),
-                garmentArea.getWidth(),
-                garmentArea.getHeight()
+                garmentArea.getDisplayOrder()
+//                garmentArea.getXCoordinate(),
+//                garmentArea.getYCoordinate(),
+//                garmentArea.getWidth(),
+//                garmentArea.getHeight()
         );
     }
 }

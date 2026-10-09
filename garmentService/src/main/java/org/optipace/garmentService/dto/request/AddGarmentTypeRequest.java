@@ -24,4 +24,5 @@ public class AddGarmentTypeRequest {
     private String description;
 
     private String remarks;
+    
 }

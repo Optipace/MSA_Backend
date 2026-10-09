@@ -25,11 +25,11 @@ public class UpdateGarmentAreaRequest {
 
     private Integer displayOrder;
 
-    private BigDecimal xCoordinate;
-
-    private BigDecimal yCoordinate;
-
-    private BigDecimal width;
-
-    private BigDecimal height;
+//    private BigDecimal xCoordinate;
+//
+//    private BigDecimal yCoordinate;
+//
+//    private BigDecimal width;
+//
+//    private BigDecimal height;
 }

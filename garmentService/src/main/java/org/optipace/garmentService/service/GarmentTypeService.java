@@ -1,12 +1,14 @@
 package org.optipace.garmentService.service;
 
 import org.optipace.garmentService.dto.request.AddGarmentTypeRequest;
+
 import org.optipace.garmentService.dto.request.UpdateGarmentTypeRequest;
 import org.optipace.garmentService.dto.response.GarmentTypeResponse;
 import org.optipace.garmentService.dto.response.ListOfGarmentTypeResponse;
 import org.optipace.garmentService.dto.response.PageResponse;
 import org.optipace.garmentService.dto.response.SingleResponse;
 import org.springframework.data.domain.Pageable;
+
 
 public interface GarmentTypeService {
 
