@@ -2,10 +2,10 @@ package org.optipace.adminService.service;
 
 import org.optipace.adminService.dto.response.SingleResponse;
 
+import java.util.List;
 import java.util.Map;
 
-public interface AssessorDashboardService {
+public interface AssessorReportService {
 
-    SingleResponse<Map<String, Object>> getAssessorDashboard();
-
+    SingleResponse<List<Map<String, Object>>> getAssessorReport();
 }

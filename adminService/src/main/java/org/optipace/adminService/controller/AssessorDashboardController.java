@@ -25,6 +25,8 @@ public class AssessorDashboardController {
      * - Total Employees
      * - Assessment Completed
      * - Assessment Pending
+     * - Average Score
+     * - Employee Assessment Details
      */
     @GetMapping
     @PreAuthorize("hasAuthority('SUPER_ADMIN')")
@@ -33,7 +35,7 @@ public class AssessorDashboardController {
         log.info("REST request to get assessor dashboard");
 
         return ResponseEntity.ok(
-                assessorDashboardService.getDashboardSummary()
+                assessorDashboardService.getAssessorDashboard()
         );
     }
 }
