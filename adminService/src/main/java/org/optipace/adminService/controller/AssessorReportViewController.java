@@ -19,7 +19,7 @@ public class AssessorReportViewController {
     @Autowired
     private AssessorReportViewService assessmentService;
 
-    @GetMapping("/details/{sessionId}")
+    @GetMapping("/empdetails/{sessionId}")
     public ResponseEntity<AssessorReportViewResponse> getAssessmentDetails(@PathVariable UUID sessionId) {
     	AssessorReportViewResponse response = assessmentService.getAssessmentDetails(sessionId);
         return ResponseEntity.ok(response);

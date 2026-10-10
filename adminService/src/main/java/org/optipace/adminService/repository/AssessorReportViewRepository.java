@@ -67,17 +67,19 @@ public class AssessorReportViewRepository {
     /**
      * Query 2: Fetch test breakdown for Bar Chart & Table Rows
      */
-    public List<Map<String, Object>> getTestBreakdownBySessionId(UUID sessionId) {
+    public List<Map<String, Object>> getAssessmentDetailsBySessionId(UUID sessionId) {
         String sql = """
             SELECT 
-                am.assessment_module_id AS moduleId,
-                am.module_name AS testName,
-                CAST(COALESCE(ami.completed_on, ami.started_on, s.assigned_on) AS date) AS testDate,
-                ROUND(COALESCE(ami.percentage, 0)::numeric, 0) AS percentage,
+                ami.assessment_module_id AS "moduleId",
+                am.module_name AS "testName",
+                ami.started_on::text AS "testDate",
+                ROUND(COALESCE(ami.obtained_score, 0)::numeric, 0) AS "obtainedScore",
+                ROUND(COALESCE(ami.maximum_score, 0)::numeric, 0) AS "totalScore",
+                ROUND(COALESCE(ami.percentage, 0)::numeric, 0) AS "percentage",
                 CASE 
                     WHEN ami.percentage >= t.pass_percentage THEN 'Passed'
                     ELSE 'Failed'
-                END AS result
+                END AS "result"
             FROM assessment.assessment_session s
             JOIN config.assessment_template t 
                 ON s.assessment_template_id = t.assessment_template_id
@@ -91,7 +93,7 @@ public class AssessorReportViewRepository {
             ORDER BY am.display_order
         """;
 
-        // Fixed: queryForList instead of queryList
+        //log.debug("Fetching assessment details for session ID: {}", sessionId);
         return jdbcTemplate.queryForList(sql, sessionId);
     }
 }

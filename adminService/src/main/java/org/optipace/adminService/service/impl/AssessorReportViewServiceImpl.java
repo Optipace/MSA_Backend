@@ -23,7 +23,7 @@ public class AssessorReportViewServiceImpl implements AssessorReportViewService 
         Map<String, Object> summary = assessorReportViewRepository.getAssessmentSummaryBySessionId(sessionId);
         
         // Fetch individual test breakdown
-        List<Map<String, Object>> tests = assessorReportViewRepository.getTestBreakdownBySessionId(sessionId);
+        List<Map<String, Object>> tests = assessorReportViewRepository.getAssessmentDetailsBySessionId(sessionId);
 
         return new AssessorReportViewResponse(summary, tests);
     }

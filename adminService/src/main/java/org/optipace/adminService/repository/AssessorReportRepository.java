@@ -20,6 +20,7 @@ public class AssessorReportRepository {
 
         String sql = """
             SELECT
+                s.assessment_session_id AS "sessionId",
                 e.employee_code AS employeeId,
 
                 CONCAT_WS(
@@ -102,7 +103,8 @@ public class AssessorReportRepository {
         return jdbcTemplate.query(sql, (rs, rowNum) -> {
 
             Map<String, Object> report = new LinkedHashMap<>();
-
+            
+            report.put("sessionId", rs.getObject("sessionId"));
             report.put("employeeId", rs.getString("employeeId"));
             report.put("employee", rs.getString("employee"));
             report.put("department", rs.getString("department"));
