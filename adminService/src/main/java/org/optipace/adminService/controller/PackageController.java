@@ -46,18 +46,21 @@ public class PackageController {
     
     // ==================== READ ====================
     @GetMapping("/v1/{id}")
+    @PreAuthorize("hasAuthority('SUPER_ADMIN')")
     public ResponseEntity<SingleResponse<PackageResponse>> getPackageById(
             @PathVariable Long id) {
         return ResponseEntity.ok(packageService.getPackageById(id));
     }
     
     @GetMapping("/v1/name/{name}")
+    @PreAuthorize("hasAuthority('SUPER_ADMIN')")
     public ResponseEntity<SingleResponse<PackageResponse>> getPackageByName(
             @PathVariable String name) {
         return ResponseEntity.ok(packageService.getPackageByName(name));
     }
     
     @GetMapping("/v1/all")
+    @PreAuthorize("hasAuthority('SUPER_ADMIN')")
     public ResponseEntity<SingleResponse<PageResponse<PackageResponse>>> getAllPackages(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
@@ -71,6 +74,7 @@ public class PackageController {
     }
     
     @GetMapping("/v1/search")
+    @PreAuthorize("hasAuthority('SUPER_ADMIN')")
     public ResponseEntity<SingleResponse<PageResponse<PackageResponse>>> searchPackages(
             @RequestParam String packageName,
             @RequestParam(defaultValue = "0") int page,

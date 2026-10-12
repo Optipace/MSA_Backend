@@ -66,7 +66,7 @@ public class PurchaseServiceImpl implements PurchaseService {
         OrganizationPackage orgPkg = OrganizationPackage.builder()
             .packageEntity(pkg)
             .organizationId(request.getOrganizationId())
-           // .factoryId(request.getFactoryId())
+            .factoryId(request.getFactoryId())
             .purchasedBy(userIdLong)
             .startDate(today)
             .endDate(today.plusDays(pkg.getNumberOfDays()))
