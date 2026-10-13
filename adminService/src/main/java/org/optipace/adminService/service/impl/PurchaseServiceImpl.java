@@ -40,7 +40,7 @@ public class PurchaseServiceImpl implements PurchaseService {
     private final OrganizationPackageRepository organizationPackageRepository;
     private final SubscriptionPackageRepository subscriptionPackageRepository;
     private final PointTransactionRepository pointTransactionRepository;
-    private final OrganizationPointsRepository organizationPointsRepository;
+   // private final OrganizationPointsRepository organizationPointsRepository;
 
     // =====================================================
     // STEP 1 — FACTORY_ADMIN BUYS PACKAGE
@@ -211,38 +211,38 @@ public class PurchaseServiceImpl implements PurchaseService {
             	// =====================================================
             	// ⭐ INSERT/UPDATE into organization_points
             	// =====================================================
-            	OrganizationPoints orgPoints = organizationPointsRepository
-            	    .findByOrganizationPackageId(orgPkg.getOrganizationPackageId())
-            	    .orElse(null);
-
-            	if (orgPoints == null) {
-            	    // First time — INSERT
-            	    orgPoints = OrganizationPoints.builder()
-                    	.organizationId(orgPkg.getOrganizationId())      // ⭐ Long — matches column
-            	        .organizationId(orgPkg.getOrganizationId())
-            	        .totalPoints(pointsToCredit)
-            	        .usedPoints(0L)
-            	        .availablePoints(pointsToCredit)
-            	        .build();
-            	    
-            	    log.info("➕ Inserting OrganizationPoints — pkgId: {}, points: {}",
-            	             orgPkg.getOrganizationPackageId(), pointsToCredit);
-            	} else {
-            	    // Existing — UPDATE
-            	    long newTotal = orgPoints.getTotalPoints() + pointsToCredit;
-            	    long newAvailable = orgPoints.getAvailablePoints() + pointsToCredit;
-            	    
-            	    orgPoints.setTotalPoints(newTotal);
-            	    orgPoints.setAvailablePoints(newAvailable);
-            	    
-            	    log.info("📈 Updating OrganizationPoints — newTotal: {}, newAvailable: {}",
-            	             newTotal, newAvailable);
-            	}
-
-            	organizationPointsRepository.saveAndFlush(orgPoints);
-            
-            log.info("✅ Points CREDITED — {} points to org {} (payment: {})",
-                     pointsToCredit, orgPkg.getOrganizationId(), payment.getPaymentId());
+//            	OrganizationPoints orgPoints = organizationPointsRepository
+//            	    .findByOrganizationPackageId(orgPkg.getOrganizationPackageId())
+//            	    .orElse(null);
+//
+//            	if (orgPoints == null) {
+//            	    // First time — INSERT
+//            	    orgPoints = OrganizationPoints.builder()
+//                    	.organizationId(orgPkg.getOrganizationId())      // ⭐ Long — matches column
+//            	        .organizationId(orgPkg.getOrganizationId())
+//            	        .totalPoints(pointsToCredit)
+//            	        .usedPoints(0L)
+//            	        .availablePoints(pointsToCredit)
+//            	        .build();
+//            	    
+//            	    log.info("➕ Inserting OrganizationPoints — pkgId: {}, points: {}",
+//            	             orgPkg.getOrganizationPackageId(), pointsToCredit);
+//            	} else {
+//            	    // Existing — UPDATE
+//            	    long newTotal = orgPoints.getTotalPoints() + pointsToCredit;
+//            	    long newAvailable = orgPoints.getAvailablePoints() + pointsToCredit;
+//            	    
+//            	    orgPoints.setTotalPoints(newTotal);
+//            	    orgPoints.setAvailablePoints(newAvailable);
+//            	    
+//            	    log.info("📈 Updating OrganizationPoints — newTotal: {}, newAvailable: {}",
+//            	             newTotal, newAvailable);
+//            	}
+//
+//            	organizationPointsRepository.saveAndFlush(orgPoints);
+//            
+//            log.info("✅ Points CREDITED — {} points to org {} (payment: {})",
+//                     pointsToCredit, orgPkg.getOrganizationId(), payment.getPaymentId());
             
         } else {
             // =====================================================

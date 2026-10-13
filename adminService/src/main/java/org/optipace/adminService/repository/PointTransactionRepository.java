@@ -11,7 +11,9 @@ public interface PointTransactionRepository extends JpaRepository<PointTransacti
     
     List<PointTransaction> findByOrganizationIdOrderByCreatedOnDesc(Long organizationId);
     
-    List<PointTransaction> findByOrganizationPackageId(Long organizationPackageId);
+  //  List<PointTransaction> findByOrganizationPackageId(Long organizationPackageId);
     
     List<PointTransaction> findByReferenceTypeAndReferenceId(String referenceType, Long referenceId);
+
+    
 }
