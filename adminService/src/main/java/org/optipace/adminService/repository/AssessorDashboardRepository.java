@@ -73,7 +73,9 @@ public class AssessorDashboardRepository {
             SELECT
                 CONCAT_WS(' ', e.first_name, e.middle_name, e.last_name)
                     AS name,
-                e.employee_code AS id,
+                e.employee_id AS empId,
+                e.employee_code AS empCode,
+                s.assessment_template_id AS assessmentTemplateId,
                 d.department_name AS department,
                 f.factory_name AS factory,
                 CAST(s.assigned_on AS date) AS assessment_date,
@@ -98,7 +100,9 @@ public class AssessorDashboardRepository {
                     Map<String, Object> employee = new LinkedHashMap<>();
 
                     employee.put("name", rs.getString("name"));
-                    employee.put("id", rs.getString("id"));
+                    employee.put("empId", rs.getObject("empId"));
+                    employee.put("empCode", rs.getString("empCode"));
+                    employee.put("assessmentTemplateId", rs.getObject("assessmentTemplateId"));
                     employee.put("department", rs.getString("department"));
                     employee.put("factory", rs.getString("factory"));
 
