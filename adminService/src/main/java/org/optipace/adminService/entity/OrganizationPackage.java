@@ -85,6 +85,22 @@ public class OrganizationPackage {
     @Column(name = "updated_on")
     private LocalDateTime updatedOn;
     
+    
+  // ============ POINTS FIELDS ⭐ ADD THESE ============
+    
+    @Builder.Default
+    @Column(name = "points_allocated")
+    private Integer pointsAllocated = 0;
+    
+    @Builder.Default
+    @Column(name = "points_used")
+    private Integer pointsUsed = 0;
+    
+    @Builder.Default
+    @Column(name = "points_balance")
+    private Integer pointsBalance = 0;
+    
+    
     @PrePersist
     public void prePersist() {
         createdOn = LocalDateTime.now();
@@ -98,4 +114,5 @@ public class OrganizationPackage {
     public void preUpdate() {
         updatedOn = LocalDateTime.now();
     }
+    
 }
