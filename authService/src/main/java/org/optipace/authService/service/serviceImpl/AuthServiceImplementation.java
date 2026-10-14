@@ -11,6 +11,7 @@ import org.optipace.authService.dto.requestDto.UpdatePasswordRequest;
 import org.optipace.authService.dto.responseDto.Response;
 import org.optipace.authService.dto.responseDto.SingleResponse;
 import org.optipace.authService.dto.responseDto.TokenResponse;
+import org.optipace.authService.entity.Employee;
 import org.optipace.authService.entity.EmployeeLogin;
 import org.optipace.authService.entity.EmployeeRole;
 import org.optipace.authService.entity.LoginHistory;
@@ -20,6 +21,7 @@ import org.optipace.authService.exception.BadRequestException;
 import org.optipace.authService.exception.ForbiddenException;
 import org.optipace.authService.exception.NotFoundException;
 import org.optipace.authService.repository.EmployeeLoginRepository;
+import org.optipace.authService.repository.EmployeeRepository;
 import org.optipace.authService.repository.EmployeeRoleRepository;
 import org.optipace.authService.repository.LoginHistoryRepository;
 import org.optipace.authService.repository.PasswordHistoryRepository;
@@ -37,6 +39,8 @@ import java.util.List;
 @RequiredArgsConstructor
 @Slf4j
 public class AuthServiceImplementation implements AuthService {
+
+	private final EmployeeRepository employeeRepository;
 
     private static final int MAX_ATTEMPTS = 5;
     private static final int LOCK_TIME_MINUTES = 15;
@@ -84,6 +88,20 @@ public class AuthServiceImplementation implements AuthService {
                     log.error("Login failed: No role assigned for employeeId: {}", employeeLogin.getEmployeeId());
                     return new NotFoundException("Any assigned role not found for this employee");
                 });
+        
+        // ⭐ Fetch employee name new code added
+//        String employeeName = employeeRepository.findById(employeeLogin.getEmployeeId())
+//                .map(Employee::getFirstName)
+//                .orElse("Unknown");
+        
+        String employeeName = employeeRepository.findById(employeeLogin.getEmployeeId())
+                .map(emp -> {
+                    String first = emp.getFirstName() != null ? emp.getFirstName().trim() : "";
+                    String last  = emp.getLastName()  != null ? emp.getLastName().trim()  : "";
+                    return (first + " " + last).trim();
+                })
+                .orElse("Unknown");
+
 
         if (Boolean.TRUE.equals(employeeLogin.getAccountLocked())) {
 
@@ -126,7 +144,7 @@ public class AuthServiceImplementation implements AuthService {
             throw new BadRequestException("Invalid Password");
         }
 
-        String accessToken = jwtUtil.generateToken(employeeLogin.getEmployeeId(), employeeRole.getRole().getRoleCode());
+        String accessToken = jwtUtil.generateToken(employeeLogin.getEmployeeId(), employeeRole.getRole().getRoleCode(), employeeName);
 //        String refreshToken = jwtUtil.generateRefreshToken(employeeLogin.getEmployeeId());
 
         employeeLogin.setFailedAttempts(0);
@@ -135,7 +153,7 @@ public class AuthServiceImplementation implements AuthService {
         employeeLoginRepository.save(employeeLogin);
 
         saveLoginHistory(employeeLogin.getEmployeeId(), ipAddress, userAgent, "SUCCESS", null);
-        log.info("Login successful for username: {} (EmployeeID: {})", username, employeeLogin.getEmployeeId());
+        log.info("Login successful for username: {} (EmployeeID: {})", username, employeeLogin.getEmployeeId(), employeeName);
 
         TokenResponse tokenResponse = new TokenResponse(accessToken);
         return new SingleResponse<>(

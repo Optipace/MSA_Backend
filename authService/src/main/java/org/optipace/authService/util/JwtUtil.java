@@ -34,9 +34,11 @@ public class JwtUtil {
 //    @Value("${app.jwt.expiration-refresh}")
 //    private Long refreshExpiration;
 
-    public String generateToken(Long employeeId, String role) {
+    public String generateToken(Long employeeId, String role, String name) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("role", role);
+        claims.put("name", name);    
+        
         String jwtId = UUID.randomUUID().toString();
         return Jwts.builder()
                 .setClaims(claims)
