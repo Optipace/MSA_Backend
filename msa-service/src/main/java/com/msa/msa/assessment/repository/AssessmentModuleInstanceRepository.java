@@ -20,4 +20,9 @@ public interface AssessmentModuleInstanceRepository
             UUID assessmentModuleInstanceId,
             UUID assessmentSessionId
     );
+
+    List<AssessmentModuleInstance>
+    findByAssessmentAttemptAssessmentAttemptIdAndIsDeletedFalseOrderBySequenceNo(
+            UUID assessmentAttemptId
+    );
 }

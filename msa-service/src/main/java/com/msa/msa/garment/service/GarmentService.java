@@ -91,8 +91,8 @@ public class GarmentService {
                     "Assessment module instance ID is required");
         }
 
-        if (request.getBarcode() == null
-                || request.getBarcode().trim().isEmpty()) {
+        if (request.getBatchId() == null
+                || request.getBatchId().trim().isEmpty()) {
             throw new BadRequestException("Barcode is required");
         }
 
@@ -136,7 +136,7 @@ public class GarmentService {
         // 6. Find garment by barcode
         GarmentInstance garment =
                 garmentInstanceRepository
-                        .findByBarcode(request.getBarcode().trim())
+                        .findByBarcode(request.getBatchId().trim())
                         .orElseThrow(() ->
                                 new BadRequestException(
                                         "Garment not found for the provided barcode"));
@@ -506,12 +506,11 @@ public class GarmentService {
         // the SAME assessment attempt
         AssessmentModuleInstance areaModuleInstance = null;
 
-        List<AssessmentModuleInstance> moduleInstances =
-                assessmentModuleInstanceRepository
-                        .findByAssessmentAttemptAssessmentAttemptIdOrderBySequenceNo(
-                                defectModuleInstance
-                                        .getAssessmentAttempt()
-                                        .getAssessmentAttemptId());
+
+        List<AssessmentModuleInstance> moduleInstances = assessmentModuleInstanceRepository
+                .findByAssessmentAttemptAssessmentAttemptIdAndIsDeletedFalseOrderBySequenceNo(
+                        defectModuleInstance.getAssessmentAttempt().getAssessmentAttemptId());
+
 
         for (AssessmentModuleInstance instance :
                 moduleInstances) {

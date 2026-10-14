@@ -1,13 +1,7 @@
 package com.msa.msa.assessment.service;
 
-import com.msa.msa.assessment.dto.CreateAssessmentRequest;
+import com.msa.msa.assessment.dto.*;
 import com.msa.msa.common.exception.BadRequestException;
-import com.msa.msa.assessment.dto.CreateAssessmentResponse;
-import com.msa.msa.assessment.dto.ModuleProgressResponse;
-import com.msa.msa.assessment.dto.StartModuleResponse;
-import com.msa.msa.assessment.dto.AssessmentProgressResponse;
-import com.msa.msa.assessment.dto.IqSubmitRequest;
-import com.msa.msa.assessment.dto.IqSubmitResponse;
 import com.msa.msa.assessment.entity.*;
 import com.msa.msa.assessment.repository.*;
 
@@ -35,20 +29,9 @@ public class AssessmentService {
     private final AssessmentStatusRepository assessmentStatusRepository;
     private final AssessmentModuleRepository assessmentModuleRepository;
     private final AssessmentTemplateRuleRepository assessmentTemplateRuleRepository;
-    
 
-    public AssessmentService(
-            EmployeeRepository employeeRepository,
-            AssessmentTemplateRepository assessmentTemplateRepository,
-            AssessmentTemplateModuleRepository assessmentTemplateModuleRepository,
-            AssessmentAttemptRepository assessmentAttemptRepository,
-            AssessmentModuleInstanceRepository assessmentModuleInstanceRepository,
-            ModuleStatusRepository moduleStatusRepository,
-            AssessmentSessionRepository assessmentSessionRepository,
-            AssessmentStatusRepository assessmentStatusRepository,
-            AssessmentModuleRepository assessmentModuleRepository,
-            AssessmentTemplateRuleRepository assessmentTemplateRuleRepository
-    ) {
+
+    public AssessmentService(EmployeeRepository employeeRepository, AssessmentTemplateRepository assessmentTemplateRepository, AssessmentTemplateModuleRepository assessmentTemplateModuleRepository, AssessmentAttemptRepository assessmentAttemptRepository, AssessmentModuleInstanceRepository assessmentModuleInstanceRepository, ModuleStatusRepository moduleStatusRepository, AssessmentSessionRepository assessmentSessionRepository, AssessmentStatusRepository assessmentStatusRepository, AssessmentModuleRepository assessmentModuleRepository, AssessmentTemplateRuleRepository assessmentTemplateRuleRepository) {
         this.employeeRepository = employeeRepository;
         this.assessmentTemplateRepository = assessmentTemplateRepository;
         this.assessmentTemplateModuleRepository = assessmentTemplateModuleRepository;
@@ -60,43 +43,25 @@ public class AssessmentService {
         this.assessmentModuleRepository = assessmentModuleRepository;
         this.assessmentTemplateRuleRepository = assessmentTemplateRuleRepository;
     }
+
     @Transactional
-    public StartModuleResponse startModule(
-            UUID assessmentSessionId,
-            UUID assessmentModuleInstanceId) {
+    public StartModuleResponse startModule(UUID assessmentSessionId, UUID assessmentModuleInstanceId) {
 
-        AssessmentModuleInstance moduleInstance =
-                assessmentModuleInstanceRepository
-                        .findByAssessmentModuleInstanceIdAndAssessmentAttemptAssessmentSessionAssessmentSessionId(
-                                assessmentModuleInstanceId,
-                                assessmentSessionId
-                        )
-                        .orElseThrow(() ->
-                                new BadRequestException(
-                                        "Assessment module does not belong to this assessment"
-                                )
-                        );
+        AssessmentModuleInstance moduleInstance = assessmentModuleInstanceRepository.findByAssessmentModuleInstanceIdAndAssessmentAttemptAssessmentSessionAssessmentSessionId(assessmentModuleInstanceId, assessmentSessionId).orElseThrow(() -> new BadRequestException("Assessment module does not belong to this assessment"));
 
-        String currentStatus =
-                moduleInstance.getModuleStatus().getStatusCode();
+        String currentStatus = moduleInstance.getModuleStatus().getStatusCode();
 
         if (!"AVAILABLE".equals(currentStatus)) {
 
             if ("IN_PROGRESS".equals(currentStatus)) {
-                throw new BadRequestException(
-                        "Assessment module is already in progress"
-                );
+                throw new BadRequestException("Assessment module is already in progress");
             }
 
             if ("COMPLETED".equals(currentStatus)) {
-                throw new BadRequestException(
-                        "Assessment module is already completed"
-                );
+                throw new BadRequestException("Assessment module is already completed");
             }
 
-            throw new BadRequestException(
-                    "Assessment module is currently locked"
-            );
+            throw new BadRequestException("Assessment module is currently locked");
         }
 
         /*
@@ -125,14 +90,7 @@ public class AssessmentService {
 //            }
 //        }
 
-        ModuleStatus inProgressStatus =
-                moduleStatusRepository
-                        .findByStatusCode("IN_PROGRESS")
-                        .orElseThrow(() ->
-                                new BadRequestException(
-                                        "IN_PROGRESS module status is not configured"
-                                )
-                        );
+        ModuleStatus inProgressStatus = moduleStatusRepository.findByStatusCode("IN_PROGRESS").orElseThrow(() -> new BadRequestException("IN_PROGRESS module status is not configured"));
 
         OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
 
@@ -144,21 +102,11 @@ public class AssessmentService {
         /*
          * Update assessment status
          */
-        AssessmentSession session =
-                moduleInstance.getAssessmentAttempt()
-                        .getAssessmentSession();
+        AssessmentSession session = moduleInstance.getAssessmentAttempt().getAssessmentSession();
 
-        AssessmentStatus assessmentInProgress =
-                assessmentStatusRepository
-                        .findByStatusCode("IN_PROGRESS")
-                        .orElseThrow(() ->
-                                new BadRequestException(
-                                        "IN_PROGRESS assessment status is not configured"
-                                )
-                        );
+        AssessmentStatus assessmentInProgress = assessmentStatusRepository.findByStatusCode("IN_PROGRESS").orElseThrow(() -> new BadRequestException("IN_PROGRESS assessment status is not configured"));
 
-        if ("ASSIGNED".equals(
-                session.getAssessmentStatus().getStatusCode())) {
+        if ("ASSIGNED".equals(session.getAssessmentStatus().getStatusCode())) {
 
             session.setAssessmentStatus(assessmentInProgress);
             session.setStartedOn(now);
@@ -167,131 +115,68 @@ public class AssessmentService {
             assessmentSessionRepository.save(session);
         }
 
-        AssessmentModule module =
-                assessmentModuleRepository
-                        .findById(moduleInstance.getAssessmentModuleId())
-                        .orElseThrow(() ->
-                                new BadRequestException(
-                                        "Assessment module configuration not found"
-                                )
-                        );
+        AssessmentModule module = assessmentModuleRepository.findById(moduleInstance.getAssessmentModuleId()).orElseThrow(() -> new BadRequestException("Assessment module configuration not found"));
 
-        return new StartModuleResponse(
-                moduleInstance.getAssessmentModuleInstanceId(),
-                module.getModuleCode(),
-                module.getModuleName(),
-                inProgressStatus.getStatusCode(),
-                moduleInstance.getStartedOn()
-        );
+        return new StartModuleResponse(moduleInstance.getAssessmentModuleInstanceId(), module.getModuleCode(), module.getModuleName(), inProgressStatus.getStatusCode(), moduleInstance.getStartedOn());
     }
+
     @Transactional
     public IqSubmitResponse submitIqTest(IqSubmitRequest request) {
 
         // 1. Find the module instance and make sure it belongs
         //    to the requested assessment
-        AssessmentModuleInstance moduleInstance =
-                assessmentModuleInstanceRepository
-                        .findByAssessmentModuleInstanceIdAndAssessmentAttemptAssessmentSessionAssessmentSessionId(
-                                request.getAssessmentModuleInstanceId(),
-                                request.getAssessmentSessionId()
-                        )
-                        .orElseThrow(() ->
-                                new BadRequestException(
-                                        "Assessment module does not belong to this assessment"
-                                )
-                        );
+        AssessmentModuleInstance moduleInstance = assessmentModuleInstanceRepository.findByAssessmentModuleInstanceIdAndAssessmentAttemptAssessmentSessionAssessmentSessionId(request.getAssessmentModuleInstanceId(), request.getAssessmentSessionId()).orElseThrow(() -> new BadRequestException("Assessment module does not belong to this assessment"));
 
         // 2. Verify module configuration
-        AssessmentModule module =
-                assessmentModuleRepository
-                        .findById(moduleInstance.getAssessmentModuleId())
-                        .orElseThrow(() ->
-                                new BadRequestException(
-                                        "Assessment module configuration not found"
-                                )
-                        );
+        AssessmentModule module = assessmentModuleRepository.findById(moduleInstance.getAssessmentModuleId()).orElseThrow(() -> new BadRequestException("Assessment module configuration not found"));
 
         // 3. Make sure this is the IQ module
         if (!"IQ".equals(module.getModuleCode())) {
-            throw new BadRequestException(
-                    "This assessment module is not an IQ module"
-            );
+            throw new BadRequestException("This assessment module is not an IQ module");
         }
 
         // 4. IQ must have been started before it can be submitted
-        String moduleStatus =
-                moduleInstance.getModuleStatus().getStatusCode();
+        String moduleStatus = moduleInstance.getModuleStatus().getStatusCode();
 
         if (!"IN_PROGRESS".equals(moduleStatus)) {
 
             if ("COMPLETED".equals(moduleStatus)) {
-                throw new BadRequestException(
-                        "IQ module is already completed"
-                );
+                throw new BadRequestException("IQ module is already completed");
             }
 
-            throw new BadRequestException(
-                    "IQ module has not been started"
-            );
+            throw new BadRequestException("IQ module has not been started");
         }
 
         // 5. Get IQ time limit from configuration
-        AssessmentSession session =
-                moduleInstance.getAssessmentAttempt()
-                        .getAssessmentSession();
+        AssessmentSession session = moduleInstance.getAssessmentAttempt().getAssessmentSession();
 
-        AssessmentTemplateRule iqTimeRule =
-                assessmentTemplateRuleRepository
-                        .findByAssessmentTemplateIdAndRuleName(
-                                session.getAssessmentTemplateId(),
-                                "IQ_TIME_LIMIT_SECONDS"
-                        )
-                        .orElseThrow(() ->
-                                new BadRequestException(
-                                        "IQ time limit is not configured"
-                                )
-                        );
+        AssessmentTemplateRule iqTimeRule = assessmentTemplateRuleRepository.findByAssessmentTemplateIdAndRuleName(session.getAssessmentTemplateId(), "IQ_TIME_LIMIT_SECONDS").orElseThrow(() -> new BadRequestException("IQ time limit is not configured"));
 
         BigDecimal timeLimitSeconds;
 
         try {
-            timeLimitSeconds =
-                    new BigDecimal(iqTimeRule.getRuleValue());
+            timeLimitSeconds = new BigDecimal(iqTimeRule.getRuleValue());
         } catch (NumberFormatException e) {
-            throw new BadRequestException(
-                    "Invalid IQ time limit configuration"
-            );
+            throw new BadRequestException("Invalid IQ time limit configuration");
         }
 
         // 6. Validate submitted completion time
-        BigDecimal completionTimeSeconds =
-                request.getCompletionTimeSeconds();
+        BigDecimal completionTimeSeconds = request.getCompletionTimeSeconds();
 
         if (completionTimeSeconds.compareTo(BigDecimal.ZERO) < 0) {
-            throw new BadRequestException(
-                    "Completion time cannot be negative"
-            );
+            throw new BadRequestException("Completion time cannot be negative");
         }
 
         // 7. Determine PASS / FAIL
-        boolean passed =
-                completionTimeSeconds.compareTo(timeLimitSeconds) <= 0;
+        boolean passed = completionTimeSeconds.compareTo(timeLimitSeconds) <= 0;
 
         String result = passed ? "PASS" : "FAIL";
 
         // 8. Get COMPLETED status
-        ModuleStatus completedStatus =
-                moduleStatusRepository
-                        .findByStatusCode("COMPLETED")
-                        .orElseThrow(() ->
-                                new BadRequestException(
-                                        "COMPLETED module status is not configured"
-                                )
-                        );
+        ModuleStatus completedStatus = moduleStatusRepository.findByStatusCode("COMPLETED").orElseThrow(() -> new BadRequestException("COMPLETED module status is not configured"));
 
         // 9. Complete IQ module
-        OffsetDateTime now =
-                OffsetDateTime.now(ZoneOffset.UTC);
+        OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
 
         moduleInstance.setModuleStatus(completedStatus);
         moduleInstance.setCompletedOn(now);
@@ -299,64 +184,34 @@ public class AssessmentService {
         // IQ is represented as a percentage score:
         // PASS = 100, FAIL = 0
         moduleInstance.setMaximumScore(BigDecimal.valueOf(100));
-        moduleInstance.setObtainedScore(
-                passed
-                        ? BigDecimal.valueOf(100)
-                        : BigDecimal.ZERO
-        );
-        moduleInstance.setPercentage(
-                passed
-                        ? BigDecimal.valueOf(100)
-                        : BigDecimal.ZERO
-        );
+        moduleInstance.setObtainedScore(passed ? BigDecimal.valueOf(100) : BigDecimal.ZERO);
+        moduleInstance.setPercentage(passed ? BigDecimal.valueOf(100) : BigDecimal.ZERO);
 
         assessmentModuleInstanceRepository.save(moduleInstance);
 
         // 10. Unlock the next module
-        List<AssessmentModuleInstance> modules =
-                assessmentModuleInstanceRepository
-                        .findByAssessmentAttemptAssessmentAttemptIdOrderBySequenceNo(
-                                moduleInstance.getAssessmentAttempt()
-                                        .getAssessmentAttemptId()
-                        );
+       // List<AssessmentModuleInstance> modules = assessmentModuleInstanceRepository.findByAssessmentAttemptAssessmentAttemptIdOrderBySequenceNo(moduleInstance.getAssessmentAttempt().getAssessmentAttemptId());
+        List<AssessmentModuleInstance> modules = assessmentModuleInstanceRepository.findByAssessmentAttemptAssessmentAttemptIdAndIsDeletedFalseOrderBySequenceNo(moduleInstance.getAssessmentAttempt().getAssessmentAttemptId());
 
         String nextModuleCode = null;
 
         for (AssessmentModuleInstance nextModule : modules) {
 
-            if (nextModule.getSequenceNo()
-                    > moduleInstance.getSequenceNo()) {
+            if (nextModule.getSequenceNo() > moduleInstance.getSequenceNo()) {
 
-                String nextStatus =
-                        nextModule.getModuleStatus()
-                                .getStatusCode();
+                String nextStatus = nextModule.getModuleStatus().getStatusCode();
 
                 if ("LOCKED".equals(nextStatus)) {
 
-                    ModuleStatus availableStatus =
-                            moduleStatusRepository
-                                    .findByStatusCode("AVAILABLE")
-                                    .orElseThrow(() ->
-                                            new BadRequestException(
-                                                    "AVAILABLE module status is not configured"
-                                            )
-                                    );
+                    ModuleStatus availableStatus = moduleStatusRepository.findByStatusCode("AVAILABLE").orElseThrow(() -> new BadRequestException("AVAILABLE module status is not configured"));
 
                     nextModule.setModuleStatus(availableStatus);
 
                     assessmentModuleInstanceRepository.save(nextModule);
 
-                    AssessmentModule nextModuleConfig =
-                            assessmentModuleRepository
-                                    .findById(nextModule.getAssessmentModuleId())
-                                    .orElseThrow(() ->
-                                            new BadRequestException(
-                                                    "Next assessment module configuration not found"
-                                            )
-                                    );
+                    AssessmentModule nextModuleConfig = assessmentModuleRepository.findById(nextModule.getAssessmentModuleId()).orElseThrow(() -> new BadRequestException("Next assessment module configuration not found"));
 
-                    nextModuleCode =
-                            nextModuleConfig.getModuleCode();
+                    nextModuleCode = nextModuleConfig.getModuleCode();
 
                     break;
                 }
@@ -364,95 +219,58 @@ public class AssessmentService {
         }
 
         // 11. Return result
-        return new IqSubmitResponse(
-                moduleInstance.getAssessmentModuleInstanceId(),
-                module.getModuleCode(),
-                completionTimeSeconds,
-                timeLimitSeconds,
-                result,
-                completedStatus.getStatusCode(),
-                nextModuleCode
-        );
+        return new IqSubmitResponse(moduleInstance.getAssessmentModuleInstanceId(), module.getModuleCode(), completionTimeSeconds, timeLimitSeconds, result, completedStatus.getStatusCode(), nextModuleCode);
     }
 
     @Transactional
-    public CreateAssessmentResponse createAssessment(
-            CreateAssessmentRequest request
-    ) {
+    public CreateAssessmentResponse createAssessment(CreateAssessmentRequest request) {
         // 1. Validate employee
-        Employee employee = employeeRepository
-                .findById(request.getEmployeeId())
-                .orElseThrow(() ->
-                        new RuntimeException("Employee not found")
-                );
-        String status=employee.getRecordStatus();
-       
+        Employee employee = employeeRepository.findById(request.getEmployeeId()).orElseThrow(() -> new RuntimeException("Employee not found"));
+        String status = employee.getRecordStatus();
+
 
 //        if (!"A".equals(employee.getRecordStatus())) {
 //            throw new RuntimeException("Employee is not active");
 //        }
-        if (employee.getRecordStatus() == null ||
-                !"A".equals(employee.getRecordStatus().trim())) {
+        if (employee.getRecordStatus() == null || !"A".equals(employee.getRecordStatus().trim())) {
             throw new RuntimeException("Employee is not active");
         }
 
         // 2. Validate assessment template
-        AssessmentTemplate template = assessmentTemplateRepository
-                .findById(request.getAssessmentTemplateId())
-                .orElseThrow(() ->
-                        new RuntimeException("Assessment template not found")
-                );
+        AssessmentTemplate template = assessmentTemplateRepository.findById(request.getAssessmentTemplateId()).orElseThrow(() -> new RuntimeException("Assessment template not found"));
 
         if (!"A".equals(template.getRecordStatus().trim())) {
             throw new RuntimeException("Assessment template is not active");
         }
 
         // 3. Get configured modules
-        List<AssessmentTemplateModule> templateModules =
-                assessmentTemplateModuleRepository
-                        .findByAssessmentTemplateIdOrderBySequenceNo(
-                                template.getAssessmentTemplateId()
-                        );
+        List<AssessmentTemplateModule> templateModules = assessmentTemplateModuleRepository.findByAssessmentTemplateIdOrderBySequenceNo(template.getAssessmentTemplateId());
 
         if (templateModules.isEmpty()) {
-            throw new BadRequestException(
-                    "No modules are configured for assessment template: "
-                            + request.getAssessmentTemplateId()
-            );
+            throw new BadRequestException("No modules are configured for assessment template: " + request.getAssessmentTemplateId());
         }
 
         // 4. Current time
         OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
 
         // 5. Calculate validity
-        int validityDays = template.getValidityDays() != null
-                ? template.getValidityDays()
-                : 30;
+        int validityDays = template.getValidityDays() != null ? template.getValidityDays() : 30;
 
-        OffsetDateTime validUntil =
-                now.plusDays(validityDays);
+        OffsetDateTime validUntil = now.plusDays(validityDays);
 
         // 6. Generate Test ID
-        String assessmentNo =
-                generateAssessmentNumber();
+        String assessmentNo = generateAssessmentNumber();
 
         // 7. Create assessment session
         AssessmentSession session = new AssessmentSession();
 
         session.setAssessmentNo(assessmentNo);
         session.setEmployeeId(employee.getEmployeeId());
-        session.setAssessmentTemplateId(
-                template.getAssessmentTemplateId()
-        );
+        session.setAssessmentTemplateId(template.getAssessmentTemplateId());
         session.setAssignedOn(now);
         session.setAssessmentCycleId(template.getAssessmentCycleId());
-     
-        AssessmentStatus assignedStatus =
-                assessmentStatusRepository.findByStatusCode("ASSIGNED")
-                        .orElseThrow(() ->
-                                new RuntimeException(
-                                        "ASSIGNED assessment status not configured"
-                                ));
+
+        AssessmentStatus assignedStatus = assessmentStatusRepository.findByStatusCode("ASSIGNED").orElseThrow(() -> new RuntimeException("ASSIGNED assessment status not configured"));
 
         session.setAssessmentStatus(assignedStatus);
         session.setCreatedOn(now);
@@ -476,35 +294,17 @@ public class AssessmentService {
         assessmentAttemptRepository.save(attempt);
 
         // 9. Get module statuses
-        ModuleStatus lockedStatus =
-                moduleStatusRepository.findByStatusCode("LOCKED")
-                        .orElseThrow(() ->
-                                new RuntimeException(
-                                        "LOCKED module status not configured"
-                                ));
+        ModuleStatus lockedStatus = moduleStatusRepository.findByStatusCode("LOCKED").orElseThrow(() -> new RuntimeException("LOCKED module status not configured"));
 
-        ModuleStatus availableStatus =
-                moduleStatusRepository.findByStatusCode("AVAILABLE")
-                        .orElseThrow(() ->
-                                new RuntimeException(
-                                        "AVAILABLE module status not configured"
-                                ));
-       
-        for (AssessmentTemplateModule templateModule :
-                templateModules) {
+        ModuleStatus availableStatus = moduleStatusRepository.findByStatusCode("AVAILABLE").orElseThrow(() -> new RuntimeException("AVAILABLE module status not configured"));
 
-            AssessmentModuleInstance moduleInstance =
-                    new AssessmentModuleInstance();
+        for (AssessmentTemplateModule templateModule : templateModules) {
 
-            moduleInstance.setAssessmentModuleId(
-                    templateModule
-                            .getAssessmentModule()
-                            .getAssessmentModuleId()
-            );
+            AssessmentModuleInstance moduleInstance = new AssessmentModuleInstance();
 
-            moduleInstance.setSequenceNo(
-                    templateModule.getSequenceNo()
-            );
+            moduleInstance.setAssessmentModuleId(templateModule.getAssessmentModule().getAssessmentModuleId());
+
+            moduleInstance.setSequenceNo(templateModule.getSequenceNo());
 
             /*
              * Only the first sequence is available initially.
@@ -523,36 +323,19 @@ public class AssessmentService {
             moduleInstance.setCreatedOn(now);
             moduleInstance.setAssessmentAttempt(attempt);
 
-            assessmentModuleInstanceRepository.save(
-                    moduleInstance
-            );    
+            assessmentModuleInstanceRepository.save(moduleInstance);
         }
 
         // 11. Employee name
-        String employeeName =
-                buildEmployeeName(employee);
+        String employeeName = buildEmployeeName(employee);
 
         // 12. Return response
-        return new CreateAssessmentResponse(
-                session.getAssessmentSessionId().toString(),
-                session.getAssessmentNo(),
-                session.getAssessmentStatus().getStatusCode(),
-                validUntil,
-                templateModules.get(0)
-                        .getAssessmentModule()
-                        .getModuleCode()
-        );
+        return new CreateAssessmentResponse(session.getAssessmentSessionId().toString(), session.getAssessmentNo(), session.getAssessmentStatus().getStatusCode(), validUntil, templateModules.get(0).getAssessmentModule().getModuleCode());
     }
 
     private String generateAssessmentNumber() {
 
-        return "TEST-" +
-                java.time.LocalDate.now() +
-                "-" +
-                UUID.randomUUID()
-                        .toString()
-                        .substring(0, 8)
-                        .toUpperCase();
+        return "TEST-" + java.time.LocalDate.now() + "-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
     }
 
     private String buildEmployeeName(Employee employee) {
@@ -563,68 +346,40 @@ public class AssessmentService {
             name.append(employee.getFirstName());
         }
 
-        if (employee.getMiddleName() != null
-                && !employee.getMiddleName().isBlank()) {
+        if (employee.getMiddleName() != null && !employee.getMiddleName().isBlank()) {
 
-            name.append(" ")
-                    .append(employee.getMiddleName());
+            name.append(" ").append(employee.getMiddleName());
         }
 
-        if (employee.getLastName() != null
-                && !employee.getLastName().isBlank()) {
+        if (employee.getLastName() != null && !employee.getLastName().isBlank()) {
 
-            name.append(" ")
-                    .append(employee.getLastName());
+            name.append(" ").append(employee.getLastName());
         }
 
         return name.toString();
     }
+
     @Transactional
-    public AssessmentProgressResponse getAssessmentProgress(
-            UUID assessmentSessionId) {
+    public AssessmentProgressResponse getAssessmentProgress(UUID assessmentSessionId) {
 
         // 1. Find assessment
-        AssessmentSession session =
-                assessmentSessionRepository.findById(assessmentSessionId)
-                        .orElseThrow(() ->
-                                new BadRequestException(
-                                        "Assessment not found"));
+        AssessmentSession session = assessmentSessionRepository.findById(assessmentSessionId).orElseThrow(() -> new BadRequestException("Assessment not found"));
 
         // 2. Find current attempt
-        AssessmentAttempt attempt =
-                assessmentAttemptRepository
-                        .findFirstByAssessmentSessionAssessmentSessionIdOrderByAttemptNoAsc(
-                                assessmentSessionId)
-                        .orElseThrow(() ->
-                                new BadRequestException(
-                                        "Assessment attempt not found"));
+        AssessmentAttempt attempt = assessmentAttemptRepository.findFirstByAssessmentSessionAssessmentSessionIdOrderByAttemptNoAsc(assessmentSessionId).orElseThrow(() -> new BadRequestException("Assessment attempt not found"));
 
         // 3. Get module instances
-        List<AssessmentModuleInstance> moduleInstances =
-                assessmentModuleInstanceRepository
-                        .findByAssessmentAttemptAssessmentAttemptIdOrderBySequenceNo(
-                                attempt.getAssessmentAttemptId());
+        //List<AssessmentModuleInstance> moduleInstances = assessmentModuleInstanceRepository.findByAssessmentAttemptAssessmentAttemptIdOrderBySequenceNo(attempt.getAssessmentAttemptId());
+        List<AssessmentModuleInstance> moduleInstances = assessmentModuleInstanceRepository.findByAssessmentAttemptAssessmentAttemptIdAndIsDeletedFalseOrderBySequenceNo(attempt.getAssessmentAttemptId());
 
         // 4. Convert to response
-        List<ModuleProgressResponse> modules =
-                new ArrayList<>();
+        List<ModuleProgressResponse> modules = new ArrayList<>();
 
         for (AssessmentModuleInstance moduleInstance : moduleInstances) {
 
-            AssessmentModule module =
-                    assessmentModuleRepository
-                            .findById(moduleInstance.getAssessmentModuleId())
-                            .orElseThrow(() ->
-                                    new BadRequestException(
-                                            "Assessment module configuration not found"));
+            AssessmentModule module = assessmentModuleRepository.findById(moduleInstance.getAssessmentModuleId()).orElseThrow(() -> new BadRequestException("Assessment module configuration not found"));
 
-            modules.add(
-                    new ModuleProgressResponse(
-                            moduleInstance.getAssessmentModuleInstanceId(),
-                            module.getModuleCode(),
-                            moduleInstance.getModuleStatus().getStatusCode()
-                    )
-            );
+            modules.add(new ModuleProgressResponse(moduleInstance.getAssessmentModuleInstanceId(), module.getModuleCode(), moduleInstance.getModuleStatus().getStatusCode()));
         }
 
         // 5. Determine current module
@@ -632,21 +387,77 @@ public class AssessmentService {
 
         for (ModuleProgressResponse module : modules) {
 
-            if ("AVAILABLE".equals(module.getStatus())
-                    || "IN_PROGRESS".equals(module.getStatus())) {
+            if ("AVAILABLE".equals(module.getStatus()) || "IN_PROGRESS".equals(module.getStatus())) {
 
                 currentModule = module.getModuleCode();
                 break;
             }
         }
- 
+
         // 6. Return response
-        return new AssessmentProgressResponse(
-                session.getAssessmentSessionId(),
-                session.getAssessmentNo(),
-                session.getAssessmentStatus().getStatusCode(),
-                currentModule,
-                modules
-        );
+        return new AssessmentProgressResponse(session.getAssessmentSessionId(), session.getAssessmentNo(), session.getAssessmentStatus().getStatusCode(), currentModule, modules);
+    }
+
+    @Transactional
+    public RetestModuleResponse retestModule(RetestModuleRequest request) {
+
+        // 1. Find the original module instance belonging to this assessment
+        AssessmentModuleInstance oldInstance = assessmentModuleInstanceRepository.findByAssessmentModuleInstanceIdAndAssessmentAttemptAssessmentSessionAssessmentSessionId(request.getAssessmentModuleInstanceId(), request.getAssessmentSessionId()).orElseThrow(() -> new BadRequestException("Assessment module does not belong to this assessment"));
+
+        // 2. Do not allow retesting an already deleted instance
+        if (Boolean.TRUE.equals(oldInstance.getIsDeleted())) {
+            throw new BadRequestException("This assessment module instance has already been replaced");
+        }
+
+        // 3. Find the module configuration
+        AssessmentModule module = assessmentModuleRepository.findById(oldInstance.getAssessmentModuleId()).orElseThrow(() -> new BadRequestException("Assessment module configuration not found"));
+
+        // 4. Allow retest only for the specified tests
+        String moduleCode = module.getModuleCode();
+
+        if (!List.of("IQ", "COLOR1", "COLOR2").contains(moduleCode)) {
+            throw new BadRequestException("Retest is not allowed for module: " + moduleCode);
+        }
+
+        // 5. Only completed tests can be retaken
+        String currentStatus = oldInstance.getModuleStatus().getStatusCode();
+
+        if (!"COMPLETED".equals(currentStatus)) {
+            throw new BadRequestException("Only a completed assessment module can be retaken");
+        }
+
+        // 6. Get AVAILABLE status
+        ModuleStatus availableStatus = moduleStatusRepository.findByStatusCode("AVAILABLE").orElseThrow(() -> new BadRequestException("AVAILABLE module status is not configured"));
+
+        OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+
+        // 7. Soft-delete the old instance
+        oldInstance.setIsDeleted(true);
+
+        assessmentModuleInstanceRepository.save(oldInstance);
+
+        // 8. Create a fresh module instance for the same test
+        AssessmentModuleInstance newInstance = new AssessmentModuleInstance();
+
+        // Keep the same module configuration
+        newInstance.setAssessmentModuleId(oldInstance.getAssessmentModuleId());
+
+        // Keep the same sequence in the assessment
+        newInstance.setSequenceNo(oldInstance.getSequenceNo());
+
+        // Associate the new instance with the same attempt
+        newInstance.setAssessmentAttempt(oldInstance.getAssessmentAttempt());
+
+        // New test starts as available
+        newInstance.setModuleStatus(availableStatus);
+
+        newInstance.setCreatedOn(now);
+        newInstance.setIsDeleted(false);
+
+        // UUID is generated by the entity mapping when persisted
+        AssessmentModuleInstance savedInstance = assessmentModuleInstanceRepository.save(newInstance);
+
+        // 9. Return the old and new instance IDs
+        return new RetestModuleResponse(oldInstance.getAssessmentModuleInstanceId(), savedInstance.getAssessmentModuleInstanceId(), module.getModuleCode(), module.getModuleName(), savedInstance.getModuleStatus().getStatusCode(), savedInstance.getCreatedOn());
     }
 }
