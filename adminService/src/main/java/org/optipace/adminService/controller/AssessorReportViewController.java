@@ -5,6 +5,7 @@ import org.optipace.adminService.dto.response.AssessorReportViewResponse;
 import org.optipace.adminService.service.AssessorReportViewService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -20,6 +21,7 @@ public class AssessorReportViewController {
     private AssessorReportViewService assessmentService;
 
     @GetMapping("/empdetails/{sessionId}")
+    @PreAuthorize("hasAuthority('ASSESSOR')")
     public ResponseEntity<AssessorReportViewResponse> getAssessmentDetails(@PathVariable UUID sessionId) {
     	AssessorReportViewResponse response = assessmentService.getAssessmentDetails(sessionId);
         return ResponseEntity.ok(response);

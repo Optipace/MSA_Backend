@@ -27,6 +27,7 @@ public class AssessorDashboardRepository {
 
         String summarySql = """
             SELECT
+            
                 (SELECT COUNT(*)
                  FROM master.employee
                  WHERE record_status = 'A') AS total_employees,

@@ -36,7 +36,7 @@ public class BatchController {
     }
 
     @GetMapping("/v1/all")
-    @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'FACTORY_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'FACTORY_ADMIN', 'ASSESSOR')")
     public ResponseEntity<
             SingleResponse<PageResponse<ListOfBatchResponse>>>
             getAllBatches(
@@ -51,7 +51,7 @@ public class BatchController {
     }
 
     @GetMapping("/v1/{batchId:\\d+}")
-    @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'FACTORY_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'FACTORY_ADMIN', 'ASSESSOR')")
     public ResponseEntity<SingleResponse<BatchResponse>>
             getBatchById(@PathVariable Long batchId) {
 
