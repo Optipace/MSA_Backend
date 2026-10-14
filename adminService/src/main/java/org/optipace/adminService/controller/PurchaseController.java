@@ -25,7 +25,7 @@ public class PurchaseController {
     /**
      * FACTORY_ADMIN buys a package
      */
-    @PostMapping
+    @PostMapping("/buy")
     @PreAuthorize("hasAuthority('SUPER_ADMIN')")
     public ResponseEntity<SingleResponse<PurchaseResponse>> buyPackage(
             @Valid @RequestBody PurchaseRequestDto request,
@@ -33,6 +33,11 @@ public class PurchaseController {
         
         log.info("REST request: FACTORY_ADMIN {} buying package", userId);
         
+        // If purchaseService throws an exception, the GlobalExceptionHandler will automatically catch it
+        //PurchaseResponse response = purchaseService.buyPackage(request, userId)
+        SingleResponse<PurchaseResponse> response = purchaseService.buyPackage(request, userId);
+        
+ 
         return new ResponseEntity<>(
             purchaseService.buyPackage(request, userId),
             HttpStatus.CREATED

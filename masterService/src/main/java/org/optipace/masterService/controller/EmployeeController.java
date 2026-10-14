@@ -27,7 +27,7 @@ public class EmployeeController {
     }
 
     @GetMapping("/v1/all")
-    @PreAuthorize("hasAuthority('FACTORY_ADMIN')")
+    @PreAuthorize("hasAuthority('SUPER_ADMIN')")
     public ResponseEntity<SingleResponse<PageResponse<ListOfEmployeeResponse>>> getAllEmployee(@RequestParam(defaultValue = "0")int page, @RequestParam(defaultValue = "10")int size){
         Pageable pageable = PageRequest.of(page, size);
         return ResponseEntity.ok(employeeService.getAllEmployee(pageable));

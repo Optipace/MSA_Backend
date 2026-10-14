@@ -126,7 +126,7 @@ public class Employee {
     private String remarks;
 
     @Column(name = "record_status", nullable = false, length = 1)
-    private char recordStatus;
+    private Character recordStatus;
 
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "employee")
     private Set<Employee> employees = new HashSet<Employee>(0);
