@@ -18,5 +18,5 @@ public interface GarmentAreaDefectService {
 
     SingleResponse<?> updateGarmentAreaDefect(Long garmentAreaDefectId, GarmentAreaDefectUpdateRequest request, String userId);
 
-    SingleResponse<?> deleteGarmentAreaDefect(Long garmentAreaDefectId, String userId);
+    //SingleResponse<?> deleteGarmentAreaDefect(Long garmentAreaDefectId, String userId);
 }

@@ -1,6 +1,9 @@
 
 package org.optipace.garmentService.repository;
 
+import java.util.Optional;
+
+import org.optipace.garmentService.entity.GarmentAreaDefect;
 import org.optipace.garmentService.entity.GarmentBatch;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
@@ -21,4 +24,5 @@ public interface GarmentBatchRepository
             String garmentCode,
             Long garmentBatchId
     );
-}
+
+    boolean existsByGarmentBatchId(Long garmentBatchId);}

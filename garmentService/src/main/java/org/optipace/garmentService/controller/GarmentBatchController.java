@@ -37,7 +37,7 @@ public class GarmentBatchController {
     }
 
     @GetMapping("/v1/all")
-    @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'FACTORY_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'FACTORY_ADMIN', 'ASSESSOR')")
     public ResponseEntity<
             SingleResponse<PageResponse<GarmentBatchResponse>>>
             getAllGarmentBatches(
