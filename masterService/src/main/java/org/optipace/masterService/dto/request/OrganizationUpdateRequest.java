@@ -1,6 +1,8 @@
 package org.optipace.masterService.dto.request;
 
 import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.Setter;
@@ -32,7 +34,11 @@ public class OrganizationUpdateRequest {
     @Email(message = "Please provide a valid email")
     private String email;
 
-    @Size(min = 13, message = "Provide a valid phone number")
+    @NotBlank(message = "Phone number is required")
+    @Pattern(
+        regexp = "^\\+?[0-9]{10,15}$",
+        message = "Provide a valid phone number (10-15 digits, optional + prefix)"
+    )
     private String phoneNumber;
 
     private String website;

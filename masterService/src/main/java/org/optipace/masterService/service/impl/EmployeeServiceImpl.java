@@ -1,12 +1,16 @@
 package org.optipace.masterService.service.impl;
 
 import feign.FeignException;
-import jakarta.transaction.Transactional;
+
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.optipace.masterService.client.AuthServiceClient;
+import org.optipace.masterService.dto.request.AddAdminRequest;
 import org.optipace.masterService.dto.request.AddEmployeeRequest;
+import org.optipace.masterService.dto.request.AddSingleEmployeeRequest;
 import org.optipace.masterService.dto.request.EmployeeLoginDto;
 import org.optipace.masterService.dto.request.UpdateEmployeeDetailsRequest;
 import org.optipace.masterService.dto.response.*;
@@ -15,6 +19,7 @@ import org.optipace.masterService.enums.CustomStatus;
 import org.optipace.masterService.exception.BadRequestException;
 import org.optipace.masterService.exception.MicroserviceException;
 import org.optipace.masterService.exception.NotFoundException;
+import org.optipace.masterService.exception.ResourceNotFoundException;
 import org.optipace.masterService.repository.*;
 import org.optipace.masterService.service.EmployeeService;
 import org.springframework.data.domain.Page;
@@ -27,6 +32,7 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
 import java.security.SecureRandom;
+import java.time.LocalDate;
 import java.util.*;
 
 @Service
@@ -34,290 +40,605 @@ import java.util.*;
 @Slf4j
 public class EmployeeServiceImpl implements EmployeeService {
 
-    private final EmployeeRepository employeeRepository;
-    private final DepartmentRepository departmentRepository;
-    private final ShiftRepository shiftRepository;
-    private final FactoryRepository factoryRepository;
-    private final OrganizationRepository organizationRepository;
-    private final DesignationRepository designationRepository;
-    private final SectionRepository sectionRepository;
-    private final AuthServiceClient authServiceClient;
-    private final ModelMapper modelMapper;
+	private final EmployeeRepository employeeRepository;
+	private final DepartmentRepository departmentRepository;
+	private final ShiftRepository shiftRepository;
+	private final FactoryRepository factoryRepository;
+	private final OrganizationRepository organizationRepository;
+	private final DesignationRepository designationRepository;
+	private final SectionRepository sectionRepository;
+	private final AuthServiceClient authServiceClient;
+	private final ModelMapper modelMapper;
 
-    @Override
-    public SingleResponse<?> createEmployee(List<AddEmployeeRequest> requestList, String adminId) {
-        log.info("Initiating batch employee creation for {} records by Admin: {}", requestList.size(), adminId);
+	private static final Long DEFAULT_FACTORY_ID = 1L;
+	private static final Long DEFAULT_DEPARTMENT_ID = 1L;
+	private static final Long DEFAULT_SHIFT_ID = 1L;
+	private static final Long DEFAULT_DESIGNATION_ID = 1L;
+	private static final Long DEFAULT_SECTION_ID = 1L;
 
-        int successfulCount = 0;
+	@Override
+	public SingleResponse<?> createEmployee(List<AddEmployeeRequest> requestList, String adminId) {
+		log.info("Initiating batch employee creation for {} records by Admin: {}", requestList.size(), adminId);
 
-        for (AddEmployeeRequest request : requestList) {
-            log.info("Processing employee code: {}", request.getEmployeeCode());
+		int successfulCount = 0;
 
-            if (employeeRepository.existsByEmployeeCode(request.getEmployeeCode())) {
-                log.warn("Creation failed: Employee code {} already exists", request.getEmployeeCode());
-                throw new BadRequestException("Employee code " + request.getEmployeeCode() + " already exists");
-            }
-            if (employeeRepository.existsByEmail(request.getEmail())) {
-                log.warn("Creation failed: Email {} already exists", request.getEmail());
-                throw new BadRequestException("Email " + request.getEmail() + " already exists");
-            }
+		for (AddEmployeeRequest request : requestList) {
+			log.info("Processing employee code: {}", request.getEmployeeCode());
 
-            Employee employee = new Employee();
-            employee.setEmployeeCode(request.getEmployeeCode());
-            employee.setFirstName(request.getFirstName());
-            employee.setMiddleName(request.getMiddleName());
-            employee.setLastName(request.getLastName());
-            employee.setBiometricId(request.getBiometricId());
+			if (employeeRepository.existsByEmployeeCode(request.getEmployeeCode())) {
+				log.warn("Creation failed: Employee code {} already exists", request.getEmployeeCode());
+				throw new BadRequestException("Employee code " + request.getEmployeeCode() + " already exists");
+			}
+			if (employeeRepository.existsByEmail(request.getEmail())) {
+				log.warn("Creation failed: Email {} already exists", request.getEmail());
+				throw new BadRequestException("Email " + request.getEmail() + " already exists");
+			}
 
-            Character gender = (request.getGender() == null || request.getGender().isEmpty()) ? null : request.getGender().charAt(0);
-            employee.setGender(gender);
-            employee.setDateOfBirth(request.getDateOfBirth());
-            employee.setDateOfJoining(request.getDateOfJoining());
-            employee.setMobileNumber(request.getMobileNumber());
-            employee.setEmail(request.getEmail());
-            employee.setAadhaarNumber(request.getAadhaarNumber());
-            employee.setEmploymentType(request.getEmploymentType());
-            employee.setExperienceYears(request.getExperienceYears());
-            employee.setRemarks(request.getRemarks());
+			Employee employee = new Employee();
+			employee.setEmployeeCode(request.getEmployeeCode());
+			employee.setFirstName(request.getFirstName());
+			employee.setMiddleName(request.getMiddleName());
+			employee.setLastName(request.getLastName());
+			employee.setBiometricId(request.getBiometricId());
 
-            employee.setDepartment(departmentRepository.getReferenceById(request.getDepartmentId()));
-            employee.setFactory(factoryRepository.getReferenceById(request.getFactoryId()));
-            employee.setShift(shiftRepository.getReferenceById(request.getShiftId()));
-            employee.setOrganization(organizationRepository.getReferenceById(request.getOrganizationId()));
-            employee.setDesignation(designationRepository.getReferenceById(request.getDesignationId()));
-            employee.setSection(sectionRepository.getReferenceById(request.getSectionId()));
+			Character gender = (request.getGender() == null || request.getGender().isEmpty()) ? null
+					: request.getGender().charAt(0);
+			employee.setGender(gender);
+			employee.setDateOfBirth(request.getDateOfBirth());
+			employee.setDateOfJoining(request.getDateOfJoining());
+			employee.setMobileNumber(request.getMobileNumber());
+			employee.setEmail(request.getEmail());
+			employee.setAadhaarNumber(request.getAadhaarNumber());
+			employee.setEmploymentType(request.getEmploymentType());
+			employee.setExperienceYears(request.getExperienceYears());
+			employee.setRemarks(request.getRemarks());
 
-            if (request.getReportingManagerId() != null) {
-                employee.setEmployee(employeeRepository.getReferenceById(request.getReportingManagerId()));
-            }
+			employee.setDepartment(departmentRepository.getReferenceById(request.getDepartmentId()));
+			employee.setFactory(factoryRepository.getReferenceById(request.getFactoryId()));
+			employee.setShift(shiftRepository.getReferenceById(request.getShiftId()));
+			employee.setOrganization(organizationRepository.getReferenceById(request.getOrganizationId()));
+			employee.setDesignation(designationRepository.getReferenceById(request.getDesignationId()));
+			employee.setSection(sectionRepository.getReferenceById(request.getSectionId()));
 
-            employee.setCreatedBy(Long.parseLong(adminId));
-            employee.setVersionNo(1);
-            employee.setRecordStatus('A');
+			if (request.getReportingManagerId() != null) {
+				employee.setEmployee(employeeRepository.getReferenceById(request.getReportingManagerId()));
+			}
 
-            employeeRepository.save(employee);
-            log.info("Employee successfully saved in master schema with ID: {}", employee.getEmployeeId());
+			employee.setCreatedBy(Long.parseLong(adminId));
+			employee.setVersionNo(1);
+			employee.setRecordStatus('A');
 
-            String plainPassword = generateSystemPassword();
-            try {
-                EmployeeLoginDto employeeLoginDto = new EmployeeLoginDto();
-                employeeLoginDto.setEmployeeId(employee.getEmployeeId());
-                employeeLoginDto.setUsername(employee.getEmail());
-                employeeLoginDto.setPlainTextPassword(plainPassword);
-                employeeLoginDto.setRoleId(request.getRoleId());
+			employeeRepository.save(employee);
+			log.info("Employee successfully saved in master schema with ID: {}", employee.getEmployeeId());
 
-                authServiceClient.registerEmployeeLogin(employeeLoginDto);
+			String plainPassword = generateSystemPassword();
+			try {
+				EmployeeLoginDto employeeLoginDto = new EmployeeLoginDto();
+				employeeLoginDto.setEmployeeId(employee.getEmployeeId());
+				employeeLoginDto.setUsername(employee.getEmail());
+				employeeLoginDto.setPlainTextPassword(plainPassword);
+				employeeLoginDto.setRoleId(request.getRoleId());
 
-                log.info("Credentials successfully transmitted to Auth Service for Employee ID: {}", employee.getEmployeeId());
-                successfulCount++;
+				authServiceClient.registerEmployeeLogin(employeeLoginDto);
+
+				log.info("Credentials successfully transmitted to Auth Service for Employee ID: {}",
+						employee.getEmployeeId());
+				successfulCount++;
 
 //                sendWelcomeEmail(employee.getEmail(), employee.getFirstName(), employee.getEmployeeCode(), plainPassword); // Need to send password in production
 
-            } catch (FeignException e) {
-                log.error("Auth service failed with status {}. Manually rolling back employee {}.", e.status(), request.getEmployeeCode());
-                employeeRepository.delete(employee);
+			} catch (FeignException e) {
+				log.error("Auth service failed with status {}. Manually rolling back employee {}.", e.status(),
+						request.getEmployeeCode());
+				employeeRepository.delete(employee);
 
-                String exactErrorMessage = "Authentication setup failed in upstream service.";
-                try {
-                    ObjectMapper mapper = new ObjectMapper();
-                    JsonNode errorNode = mapper.readTree(e.contentUTF8());
+				String exactErrorMessage = "Authentication setup failed in upstream service.";
+				try {
+					ObjectMapper mapper = new ObjectMapper();
+					JsonNode errorNode = mapper.readTree(e.contentUTF8());
 
-                    if (errorNode.has("response") && errorNode.get("response").has("message")) {
-                        exactErrorMessage = errorNode.get("response").get("message").asText();
-                    } else if (errorNode.has("message")) {
-                        exactErrorMessage = errorNode.get("message").asText();
-                    }
-                } catch (Exception parseException) {
-                    log.warn("Could not parse Feign error body", parseException);
-                }
+					if (errorNode.has("response") && errorNode.get("response").has("message")) {
+						exactErrorMessage = errorNode.get("response").get("message").asText();
+					} else if (errorNode.has("message")) {
+						exactErrorMessage = errorNode.get("message").asText();
+					}
+				} catch (Exception parseException) {
+					log.warn("Could not parse Feign error body", parseException);
+				}
 
-                throw new MicroserviceException(e.status(), "Auth Service Error for " + request.getEmployeeCode() + ": " + exactErrorMessage);
+				throw new MicroserviceException(e.status(),
+						"Auth Service Error for " + request.getEmployeeCode() + ": " + exactErrorMessage);
 
-            } catch (Exception e) {
-                log.error("Unexpected error during auth setup. Manually rolling back employee {}.", request.getEmployeeCode(), e);
-                employeeRepository.delete(employee);
-                throw new MicroserviceException(500, "Employee creation aborted for " + request.getEmployeeCode() + " due to an internal system error.");
-            }
-        }
+			} catch (Exception e) {
+				log.error("Unexpected error during auth setup. Manually rolling back employee {}.",
+						request.getEmployeeCode(), e);
+				employeeRepository.delete(employee);
+				throw new MicroserviceException(500, "Employee creation aborted for " + request.getEmployeeCode()
+						+ " due to an internal system error.");
+			}
+		}
 
-        return new SingleResponse<>(successfulCount + " employee(s) successfully created.", CustomStatus.SUCCESS);
-    }
+		return new SingleResponse<>(successfulCount + " employee(s) successfully created.", CustomStatus.SUCCESS);
+	}
 
-    @Override
-    public SingleResponse<PageResponse<ListOfEmployeeResponse>> getAllEmployee(Pageable pageable) {
-        Pageable sortedPageable = pageable.getSort().isSorted() ? pageable : PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), Sort.by(Sort.Order.asc("firstName").nullsLast()));
+	@Override
+	public SingleResponse<PageResponse<ListOfEmployeeResponse>> getAllEmployee(Pageable pageable) {
+		Pageable sortedPageable = pageable.getSort().isSorted() ? pageable
+				: PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(),
+						Sort.by(Sort.Order.asc("firstName").nullsLast()));
 
-        Page<Employee> employeePage = employeeRepository.findByRecordStatus('A', sortedPageable);
-        List<Employee> employeeList = employeePage.getContent();
+		Page<Employee> employeePage = employeeRepository.findByRecordStatus('A', sortedPageable);
+		List<Employee> employeeList = employeePage.getContent();
 
-        Set<Long> uniqueIdsForRoles = new HashSet<>();
-        for (Employee emp : employeeList) {
-            uniqueIdsForRoles.add(emp.getEmployeeId());
-            if (emp.getEmployee() != null) {
-                uniqueIdsForRoles.add(emp.getEmployee().getEmployeeId());
-            }
-        }
-        List<Long> allRequiredIds = new ArrayList<>(uniqueIdsForRoles);
+		Set<Long> uniqueIdsForRoles = new HashSet<>();
+		for (Employee emp : employeeList) {
+			uniqueIdsForRoles.add(emp.getEmployeeId());
+			if (emp.getEmployee() != null) {
+				uniqueIdsForRoles.add(emp.getEmployee().getEmployeeId());
+			}
+		}
+		List<Long> allRequiredIds = new ArrayList<>(uniqueIdsForRoles);
 
-        Map<Long, Long> employeeRoleMap = new HashMap<>();
-        if (!allRequiredIds.isEmpty()) {
-            try {
-                SingleResponse<Map<Long, Long>> employeeRoleMapResponse = authServiceClient.getRoleIdsForEmployees(allRequiredIds);
-                employeeRoleMap = employeeRoleMapResponse.getData();
-            } catch (FeignException e) {
-                log.warn("Failed to fetch role IDs from Auth Service for batch employee list", e);
+		Map<Long, Long> employeeRoleMap = new HashMap<>();
+		if (!allRequiredIds.isEmpty()) {
+			try {
+				SingleResponse<Map<Long, Long>> employeeRoleMapResponse = authServiceClient
+						.getRoleIdsForEmployees(allRequiredIds);
+				employeeRoleMap = employeeRoleMapResponse.getData();
+			} catch (FeignException e) {
+				log.warn("Failed to fetch role IDs from Auth Service for batch employee list", e);
 
-                String exactErrorMessage = "Authentication setup failed in upstream service.";
-                try {
-                    ObjectMapper mapper = new ObjectMapper();
-                    JsonNode errorNode = mapper.readTree(e.contentUTF8());
+				String exactErrorMessage = "Authentication setup failed in upstream service.";
+				try {
+					ObjectMapper mapper = new ObjectMapper();
+					JsonNode errorNode = mapper.readTree(e.contentUTF8());
 
-                    if (errorNode.has("response") && errorNode.get("response").has("message")) {
-                        exactErrorMessage = errorNode.get("response").get("message").asText();
-                    } else if (errorNode.has("message")) {
-                        exactErrorMessage = errorNode.get("message").asText();
-                    }
-                } catch (Exception parseException) {
-                    log.warn("Could not parse Feign error body", parseException);
-                }
-                throw new MicroserviceException(e.status(), "Auth Service Error" + exactErrorMessage);
+					if (errorNode.has("response") && errorNode.get("response").has("message")) {
+						exactErrorMessage = errorNode.get("response").get("message").asText();
+					} else if (errorNode.has("message")) {
+						exactErrorMessage = errorNode.get("message").asText();
+					}
+				} catch (Exception parseException) {
+					log.warn("Could not parse Feign error body", parseException);
+				}
+				throw new MicroserviceException(e.status(), "Auth Service Error" + exactErrorMessage);
 
-            } catch (Exception e) {
-                log.error("Unexpected error caught while extracting role ids for employees");
-                throw new MicroserviceException(500, "Employee role Ids fetching failed due to an internal system error.");
-            }
-        }
+			} catch (Exception e) {
+				log.error("Unexpected error caught while extracting role ids for employees");
+				throw new MicroserviceException(500,
+						"Employee role Ids fetching failed due to an internal system error.");
+			}
+		}
 
-        Map<Long, Long> finalRoleMap = employeeRoleMap;
-        List<ListOfEmployeeResponse> employeeResponseList = employeeList.stream().map(employee -> {
-            ListOfEmployeeResponse response = modelMapper.map(employee, ListOfEmployeeResponse.class);
+		Map<Long, Long> finalRoleMap = employeeRoleMap;
+		List<ListOfEmployeeResponse> employeeResponseList = employeeList.stream().map(employee -> {
+			ListOfEmployeeResponse response = modelMapper.map(employee, ListOfEmployeeResponse.class);
 
-            response.setRoleId(finalRoleMap.get(employee.getEmployeeId()));
+			response.setRoleId(finalRoleMap.get(employee.getEmployeeId()));
 //            response.setDateOfBirth(employee.getDateOfBirth());
 //            response.setDateOfJoining(employee.getDateOfJoining());
-            if (employee.getEmployee() != null) {
-                ManagerResponse managerDto = modelMapper.map(employee.getEmployee(), ManagerResponse.class);
-                managerDto.setRoleId(finalRoleMap.get(employee.getEmployee().getEmployeeId()));
-                response.setReportingManager(managerDto);
+			if (employee.getEmployee() != null) {
+				ManagerResponse managerDto = modelMapper.map(employee.getEmployee(), ManagerResponse.class);
+				managerDto.setRoleId(finalRoleMap.get(employee.getEmployee().getEmployeeId()));
+				response.setReportingManager(managerDto);
 //                response.setDateOfBirth(employee.getEmployee().getDateOfBirth());
 //                response.setDateOfJoining(employee.getEmployee().getDateOfJoining());
-            }
-            return response;
-        }).toList();
+			}
+			return response;
+		}).toList();
 
-        PageResponse<ListOfEmployeeResponse> pageResponse = new PageResponse<>(employeeResponseList, employeePage.getNumber(), employeePage.getSize(), employeePage.getTotalElements(), employeePage.getTotalPages(), employeePage.isLast());
+		PageResponse<ListOfEmployeeResponse> pageResponse = new PageResponse<>(employeeResponseList,
+				employeePage.getNumber(), employeePage.getSize(), employeePage.getTotalElements(),
+				employeePage.getTotalPages(), employeePage.isLast());
 
-        return new SingleResponse<>(pageResponse, CustomStatus.SUCCESS);
-    }
+		return new SingleResponse<>(pageResponse, CustomStatus.SUCCESS);
+	}
 
-    @Override
-    @Transactional
-    public SingleResponse<?> updateEmployee(Long employeeId, UpdateEmployeeDetailsRequest request, String adminId) {
-        log.info("Initiating employee update for ID: {} by Admin: {}", employeeId, adminId);
+	@Override
+	@Transactional
+	public SingleResponse<?> updateEmployee(Long employeeId, UpdateEmployeeDetailsRequest request, String adminId) {
+		log.info("Initiating employee update for ID: {} by Admin: {}", employeeId, adminId);
 
-        Employee employee = employeeRepository.findById(employeeId).orElseThrow(() -> new NotFoundException("Employee not found with ID: " + employeeId));
+		Employee employee = employeeRepository.findById(employeeId)
+				.orElseThrow(() -> new NotFoundException("Employee not found with ID: " + employeeId));
 
-        if (request.getEmail() != null && !request.getEmail().trim().isEmpty() && !request.getEmail().equals(employee.getEmail())) {
-            if (employeeRepository.existsByEmail(request.getEmail())) {
-                log.warn("Update failed: Email {} is already in use by another employee", request.getEmail());
-                throw new BadRequestException("Email already exists");
-            }
+		if (request.getEmail() != null && !request.getEmail().trim().isEmpty()
+				&& !request.getEmail().equals(employee.getEmail())) {
+			if (employeeRepository.existsByEmail(request.getEmail())) {
+				log.warn("Update failed: Email {} is already in use by another employee", request.getEmail());
+				throw new BadRequestException("Email already exists");
+			}
 
-            // TODO: If the email is updated here, make a Feign call to authService
-            // to update the 'username' in the EmployeeLogin table as well, otherwise the user
-            // will not be able to log in with their new email.
-            employee.setEmail(request.getEmail());
-        }
+			// TODO: If the email is updated here, make a Feign call to authService
+			// to update the 'username' in the EmployeeLogin table as well, otherwise the
+			// user
+			// will not be able to log in with their new email.
+			employee.setEmail(request.getEmail());
+		}
 
-        if (request.getFirstName() != null) employee.setFirstName(request.getFirstName());
-        if (request.getMiddleName() != null) employee.setMiddleName(request.getMiddleName());
-        if (request.getLastName() != null) employee.setLastName(request.getLastName());
-        if (request.getBiometricId() != null) employee.setBiometricId(request.getBiometricId());
+		if (request.getFirstName() != null)
+			employee.setFirstName(request.getFirstName());
+		if (request.getMiddleName() != null)
+			employee.setMiddleName(request.getMiddleName());
+		if (request.getLastName() != null)
+			employee.setLastName(request.getLastName());
+		if (request.getBiometricId() != null)
+			employee.setBiometricId(request.getBiometricId());
 
-        if (request.getGender() != null && !request.getGender().isEmpty()) {
-            employee.setGender(request.getGender().charAt(0));
-        }
+		if (request.getGender() != null && !request.getGender().isEmpty()) {
+			employee.setGender(request.getGender().charAt(0));
+		}
 
-        if (request.getDateOfBirth() != null) employee.setDateOfBirth(request.getDateOfBirth());
-        if (request.getDateOfJoining() != null) employee.setDateOfJoining(request.getDateOfJoining());
-        if (request.getMobileNumber() != null) employee.setMobileNumber(request.getMobileNumber());
-        if (request.getAadhaarNumber() != null) employee.setAadhaarNumber(request.getAadhaarNumber());
-        if (request.getEmploymentType() != null) employee.setEmploymentType(request.getEmploymentType());
-        if (request.getExperienceYears() != null) employee.setExperienceYears(request.getExperienceYears());
-        if (request.getRemarks() != null) employee.setRemarks(request.getRemarks());
+		if (request.getDateOfBirth() != null)
+			employee.setDateOfBirth(request.getDateOfBirth());
+		if (request.getDateOfJoining() != null)
+			employee.setDateOfJoining(request.getDateOfJoining());
+		if (request.getMobileNumber() != null)
+			employee.setMobileNumber(request.getMobileNumber());
+		if (request.getAadhaarNumber() != null)
+			employee.setAadhaarNumber(request.getAadhaarNumber());
+		if (request.getEmploymentType() != null)
+			employee.setEmploymentType(request.getEmploymentType());
+		if (request.getExperienceYears() != null)
+			employee.setExperienceYears(request.getExperienceYears());
+		if (request.getRemarks() != null)
+			employee.setRemarks(request.getRemarks());
 
-        if (request.getDepartmentId() != null) {
-            employee.setDepartment(departmentRepository.getReferenceById(request.getDepartmentId()));
-        }
-        if (request.getFactoryId() != null) {
-            employee.setFactory(factoryRepository.getReferenceById(request.getFactoryId()));
-        }
-        if (request.getShiftId() != null) {
-            employee.setShift(shiftRepository.getReferenceById(request.getShiftId()));
-        }
-        if (request.getOrganizationId() != null) {
-            employee.setOrganization(organizationRepository.getReferenceById(request.getOrganizationId()));
-        }
-        if (request.getDesignationId() != null) {
-            employee.setDesignation(designationRepository.getReferenceById(request.getDesignationId()));
-        }
-        if (request.getSectionId() != null) {
-            employee.setSection(sectionRepository.getReferenceById(request.getSectionId()));
-        }
-        if (request.getReportingManagerId() != null) {
-            employee.setEmployee(employeeRepository.getReferenceById(request.getReportingManagerId()));
-        }
+		if (request.getDepartmentId() != null) {
+			employee.setDepartment(departmentRepository.getReferenceById(request.getDepartmentId()));
+		}
+		if (request.getFactoryId() != null) {
+			employee.setFactory(factoryRepository.getReferenceById(request.getFactoryId()));
+		}
+		if (request.getShiftId() != null) {
+			employee.setShift(shiftRepository.getReferenceById(request.getShiftId()));
+		}
+		if (request.getOrganizationId() != null) {
+			employee.setOrganization(organizationRepository.getReferenceById(request.getOrganizationId()));
+		}
+		if (request.getDesignationId() != null) {
+			employee.setDesignation(designationRepository.getReferenceById(request.getDesignationId()));
+		}
+		if (request.getSectionId() != null) {
+			employee.setSection(sectionRepository.getReferenceById(request.getSectionId()));
+		}
+		if (request.getReportingManagerId() != null) {
+			employee.setEmployee(employeeRepository.getReferenceById(request.getReportingManagerId()));
+		}
 
-        employee.setUpdatedBy(Long.parseLong(adminId));
+		employee.setUpdatedBy(Long.parseLong(adminId));
 
-        employeeRepository.save(employee);
-        log.info("Successfully updated employee ID: {}", employeeId);
+		employeeRepository.save(employee);
+		log.info("Successfully updated employee ID: {}", employeeId);
 
-        return new SingleResponse<>("Employee updated successfully", CustomStatus.SUCCESS);
-    }
+		return new SingleResponse<>("Employee updated successfully", CustomStatus.SUCCESS);
+	}
 
-    @Override
-    public SingleResponse<EmployeeResponse> getEmployeeById(Long employeeId) {
-        Employee employee = employeeRepository.findById(employeeId).orElseThrow(() -> new NotFoundException("Employee not found with ID: " + employeeId));
+	@Override
+	public SingleResponse<EmployeeResponse> getEmployeeById(Long employeeId) {
+		Employee employee = employeeRepository.findById(employeeId)
+				.orElseThrow(() -> new NotFoundException("Employee not found with ID: " + employeeId));
 
-        EmployeeResponse employeeResponse = modelMapper.map(employee, EmployeeResponse.class);
-        employeeResponse.setManagerResponse(modelMapper.map(employee.getEmployee(), ManagerResponse.class));
-        return new SingleResponse<>(employeeResponse, CustomStatus.SUCCESS);
-    }
+		EmployeeResponse employeeResponse = modelMapper.map(employee, EmployeeResponse.class);
+		employeeResponse.setManagerResponse(modelMapper.map(employee.getEmployee(), ManagerResponse.class));
+		return new SingleResponse<>(employeeResponse, CustomStatus.SUCCESS);
+	}
 
-    @Override
-    public SingleResponse<?> deleteEmployeeById(Long employeeId, String adminId) {
-        Employee employee = employeeRepository.findById(employeeId).orElseThrow(() -> new NotFoundException("Employee not found"));
+	@Override
+	public SingleResponse<?> deleteEmployeeById(Long employeeId, String adminId) {
+		Employee employee = employeeRepository.findById(employeeId)
+				.orElseThrow(() -> new NotFoundException("Employee not found"));
 
-        employee.setRecordStatus('D');
-        employee.setUpdatedBy(Long.parseLong(adminId));
-        employeeRepository.save(employee);
-        return new SingleResponse<>("Employee successfully deleted", CustomStatus.SUCCESS);
-    }
+		employee.setRecordStatus('D');
+		employee.setUpdatedBy(Long.parseLong(adminId));
+		employeeRepository.save(employee);
+		return new SingleResponse<>("Employee successfully deleted", CustomStatus.SUCCESS);
+	}
 
-    @Override
-    public SingleResponse<EmployeeResponse> getEmployeeDetailsByToken(String employeeId) {
-        Employee employee = employeeRepository.findById(Long.parseLong(employeeId)).orElseThrow(() -> new NotFoundException("Employee not found"));
+	@Override
+	public SingleResponse<EmployeeResponse> getEmployeeDetailsByToken(String employeeId) {
+		Employee employee = employeeRepository.findById(Long.parseLong(employeeId))
+				.orElseThrow(() -> new NotFoundException("Employee not found"));
 
-        EmployeeResponse employeeResponse = modelMapper.map(employee, EmployeeResponse.class);
-        employeeResponse.setManagerResponse(modelMapper.map(employee.getEmployee(), ManagerResponse.class));
+		EmployeeResponse employeeResponse = modelMapper.map(employee, EmployeeResponse.class);
+		employeeResponse.setManagerResponse(modelMapper.map(employee.getEmployee(), ManagerResponse.class));
 
-        return new SingleResponse<>(employeeResponse, CustomStatus.SUCCESS);
-    }
+		return new SingleResponse<>(employeeResponse, CustomStatus.SUCCESS);
+	}
 
-    private String generateSystemPassword() {
-        final String VALID_CHARACTERS = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
-        SecureRandom random = new SecureRandom();
+	private String generateSystemPassword() {
+		final String VALID_CHARACTERS = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
+		SecureRandom random = new SecureRandom();
 
-        StringBuilder password = new StringBuilder(8);
+		StringBuilder password = new StringBuilder(8);
 
-        for (int i = 0; i < 8; i++) {
-            int randomIndex = random.nextInt(VALID_CHARACTERS.length());
-            password.append(VALID_CHARACTERS.charAt(randomIndex));
-        }
+		for (int i = 0; i < 8; i++) {
+			int randomIndex = random.nextInt(VALID_CHARACTERS.length());
+			password.append(VALID_CHARACTERS.charAt(randomIndex));
+		}
 
-        return password.toString();
-    }
+		return password.toString();
+	}
+
+	// =====================================================
+	// ⭐ ADD SINGLE EMPLOYEE
+	// =====================================================
+	@Override
+	// @Transactional
+	public SingleResponse<?> addSingleEmployee(AddSingleEmployeeRequest request, String adminId) {
+
+		log.info("Creating single employee: code={}, email={}", request.getEmployeeCode(), request.getEmail());
+
+		// =====================================================
+		// 1. DUPLICATE CHECKS
+		// =====================================================
+		if (employeeRepository.existsByEmployeeCode(request.getEmployeeCode())) {
+			throw new BadRequestException("Employee code '" + request.getEmployeeCode() + "' already exists");
+		}
+		if (employeeRepository.existsByEmail(request.getEmail())) {
+			throw new BadRequestException("Email '" + request.getEmail() + "' already exists");
+		}
+		if (request.getMobileNumber() != null && employeeRepository.existsByMobileNumber(request.getMobileNumber())) {
+			throw new BadRequestException("Mobile number '" + request.getMobileNumber() + "' already exists");
+		}
+		if (request.getAadhaarNumber() != null && !request.getAadhaarNumber().isBlank()
+				&& employeeRepository.existsByAadhaarNumber(request.getAadhaarNumber())) {
+			throw new BadRequestException("Aadhaar number '" + request.getAadhaarNumber() + "' already exists");
+		}
+
+		// =====================================================
+		// 2. FK EXISTENCE CHECKS
+		// =====================================================
+		if (!departmentRepository.existsById(request.getDepartmentId())) {
+			throw new ResourceNotFoundException("Department", "departmentId", request.getDepartmentId());
+		}
+		if (!factoryRepository.existsById(request.getFactoryId())) {
+			throw new ResourceNotFoundException("Factory", "factoryId", request.getFactoryId());
+		}
+		if (!shiftRepository.existsById(request.getShiftId())) {
+			throw new ResourceNotFoundException("Shift", "shiftId", request.getShiftId());
+		}
+		if (!organizationRepository.existsById(request.getOrganizationId())) {
+			throw new ResourceNotFoundException("Organization", "organizationId", request.getOrganizationId());
+		}
+		if (!designationRepository.existsById(request.getDesignationId())) {
+			throw new ResourceNotFoundException("Designation", "designationId", request.getDesignationId());
+		}
+		if (!sectionRepository.existsById(request.getSectionId())) {
+			throw new ResourceNotFoundException("Section", "sectionId", request.getSectionId());
+		}
+
+		// =====================================================
+		// 3. MAP DTO → ENTITY
+		// =====================================================
+		Employee employee = new Employee();
+		employee.setEmployeeCode(request.getEmployeeCode());
+		employee.setFirstName(request.getFirstName());
+		employee.setMiddleName(request.getMiddleName());
+		employee.setLastName(request.getLastName());
+		employee.setBiometricId(request.getBiometricId());
+
+		// Gender
+		Character gender = (request.getGender() == null || request.getGender().isEmpty()) ? null
+				: request.getGender().charAt(0);
+		employee.setGender(gender);
+
+		employee.setDateOfBirth(request.getDateOfBirth());
+		employee.setDateOfJoining(request.getDateOfJoining());
+		employee.setMobileNumber(request.getMobileNumber());
+		employee.setEmail(request.getEmail());
+		employee.setAadhaarNumber(request.getAadhaarNumber());
+		employee.setEmploymentType(request.getEmploymentType());
+		employee.setExperienceYears(request.getExperienceYears());
+		employee.setRemarks(request.getRemarks());
+
+		// FKs
+		employee.setDepartment(departmentRepository.getReferenceById(request.getDepartmentId()));
+		employee.setFactory(factoryRepository.getReferenceById(request.getFactoryId()));
+		employee.setShift(shiftRepository.getReferenceById(request.getShiftId()));
+		employee.setOrganization(organizationRepository.getReferenceById(request.getOrganizationId()));
+		employee.setDesignation(designationRepository.getReferenceById(request.getDesignationId()));
+		employee.setSection(sectionRepository.getReferenceById(request.getSectionId()));
+
+		/*
+		 * if (request.getReportingManagerId() != null) {
+		 * employee.setEmployee(employeeRepository.getReferenceById(request.
+		 * getReportingManagerId())); }
+		 */
+
+		// Audit
+		employee.setCreatedBy(Long.parseLong(adminId));
+		employee.setVersionNo(1);
+		employee.setRecordStatus('A');
+
+		// =====================================================
+		// 4. SAVE + FLUSH
+		// =====================================================
+		Employee saved = employeeRepository.saveAndFlush(employee);
+		log.info("Employee saved with ID: {}", saved.getEmployeeId());
+
+		// =====================================================
+		// 5. REGISTER LOGIN in authService via Feign
+		// =====================================================
+		String plainPassword = generateSystemPassword();
+		try {
+			EmployeeLoginDto loginDto = new EmployeeLoginDto();
+			loginDto.setEmployeeId(saved.getEmployeeId());
+			loginDto.setUsername(saved.getEmail());
+			loginDto.setPlainTextPassword(plainPassword);
+			loginDto.setRoleId(request.getRoleId());
+
+			authServiceClient.registerEmployeeLogin(loginDto);
+			log.info("Login registered for employee ID: {}", saved.getEmployeeId());
+
+		} catch (FeignException e) {
+			log.error("Auth service failed with status {}. Rolling back employee {}.", e.status(),
+					request.getEmployeeCode());
+
+			employeeRepository.delete(saved);
+
+			String exactErrorMessage = "Authentication setup failed in upstream service.";
+			try {
+				ObjectMapper mapper = new ObjectMapper();
+				JsonNode errorNode = mapper.readTree(e.contentUTF8());
+				if (errorNode.has("response") && errorNode.get("response").has("message")) {
+					exactErrorMessage = errorNode.get("response").get("message").asText();
+				} else if (errorNode.has("message")) {
+					exactErrorMessage = errorNode.get("message").asText();
+				}
+			} catch (Exception parseException) {
+				log.warn("Could not parse Feign error body", parseException);
+			}
+
+			throw new MicroserviceException(e.status(),
+					"Auth Service Error for " + request.getEmployeeCode() + ": " + exactErrorMessage);
+
+		} catch (Exception e) {
+			log.error("Unexpected error during auth setup for {}.", request.getEmployeeCode(), e);
+			employeeRepository.delete(saved);
+			throw new MicroserviceException(500,
+					"Employee creation aborted for " + request.getEmployeeCode() + " due to an internal system error.");
+		}
+
+		// =====================================================
+		// 6. BUILD RESPONSE
+		// =====================================================
+		return new SingleResponse<>(saved.getEmployeeId(), CustomStatus.SUCCESS);
+	}
+
+	@Override
+	public SingleResponse<?> addAdmin(AddAdminRequest request, String adminId) {
+
+		log.info("Creating admin: adminId={}, email={}", request.getAdminId(), request.getEmail());
+
+		// 1. Save admin (own transaction, commits before auth-service call)
+		Employee saved = createAdminInOwnTransaction(request, adminId);
+
+		// 2. Register login in auth-service
+		String plainPassword = generateSystemPassword();
+		try {
+			EmployeeLoginDto loginDto = new EmployeeLoginDto();
+			loginDto.setEmployeeId(saved.getEmployeeId());
+			loginDto.setUsername(saved.getEmail());
+			loginDto.setPlainTextPassword(plainPassword);
+			// loginDto.setRoleId(adminId); // uses SUPER_ADMIN or ADMIN role
+
+			authServiceClient.registerEmployeeLogin(loginDto);
+			log.info("Login registered for admin ID: {}", saved.getEmployeeId());
+
+		} catch (FeignException e) {
+			log.error("Auth service failed: {}", e.contentUTF8());
+			// deleteEmployeeInOwnTransaction(saved.getEmployeeId());
+			throw new MicroserviceException(e.status(), "Auth Service Error");
+		}
+
+		return new SingleResponse<>(saved.getEmployeeId(), CustomStatus.SUCCESS);
+	}
+
+	@Transactional(propagation = Propagation.REQUIRES_NEW)
+	public Employee createAdminInOwnTransaction(AddAdminRequest request, String adminId) {
+
+		// Duplicate checks
+		if (employeeRepository.existsByEmployeeCode(request.getAdminId())) {
+			throw new BadRequestException("Admin ID '" + request.getAdminId() + "' already exists");
+		}
+		if (employeeRepository.existsByEmail(request.getEmail())) {
+			throw new BadRequestException("Email '" + request.getEmail() + "' already exists");
+		}
+		if (employeeRepository.existsByMobileNumber(request.getPhoneNumber())) {
+			throw new BadRequestException("Phone number already exists");
+		}
+
+		// Organization must exist
+		if (!organizationRepository.existsById(request.getOrganizationId())) {
+			throw new ResourceNotFoundException("Organization", "organizationId", request.getOrganizationId());
+		}
+
+		// Split adminName into first + last
+		String fullName = request.getAdminName().trim();
+		String firstName, lastName;
+		int spaceIdx = fullName.indexOf(' ');
+		if (spaceIdx > 0) {
+			firstName = fullName.substring(0, spaceIdx).trim();
+			lastName = fullName.substring(spaceIdx + 1).trim();
+		} else {
+			firstName = fullName;
+			lastName = ""; // no last name
+		}
+
+		// Build entity
+		Employee admin = new Employee();
+		admin.setEmployeeCode(request.getAdminId());
+		admin.setFirstName(firstName);
+		admin.setLastName(lastName.isEmpty() ? null : lastName);
+		admin.setEmail(request.getEmail());
+		admin.setMobileNumber(request.getPhoneNumber());
+		admin.setDateOfJoining(LocalDate.now());
+		// ⭐ HARDCODED FK defaults
+		admin.setOrganization(organizationRepository.getReferenceById(request.getOrganizationId()));
+		admin.setFactory(factoryRepository.getReferenceById(DEFAULT_FACTORY_ID));
+		admin.setDepartment(departmentRepository.getReferenceById(DEFAULT_DEPARTMENT_ID));
+		admin.setShift(shiftRepository.getReferenceById(DEFAULT_SHIFT_ID));
+		admin.setDesignation(designationRepository.getReferenceById(DEFAULT_DESIGNATION_ID));
+		admin.setSection(sectionRepository.getReferenceById(DEFAULT_SECTION_ID));
+		// Location — if you have a `currentLocation` field
+		// admin.setCurrentLocation(request.getLocation());
+
+		// Organization FK
+		admin.setOrganization(organizationRepository.getReferenceById(request.getOrganizationId()));
+
+		// Audit
+		admin.setCreatedBy(Long.parseLong(adminId));
+		admin.setVersionNo(1);
+		admin.setRecordStatus('A');
+
+		// Save
+		Employee saved = employeeRepository.saveAndFlush(admin);
+		log.info("Admin saved with employee ID: {}", saved.getEmployeeId());
+
+		// --------------------------- New code -------------//
+
+		String plainPassword = generateSystemPassword();
+		try {
+			EmployeeLoginDto employeeLoginDto = new EmployeeLoginDto();
+			employeeLoginDto.setEmployeeId(admin.getEmployeeId());
+			employeeLoginDto.setUsername(admin.getEmail());
+			employeeLoginDto.setPlainTextPassword(plainPassword);
+			// employeeLoginDto.setRoleId(request.getRoleId());
+
+			authServiceClient.registerEmployeeLogin(employeeLoginDto);
+
+//            sendWelcomeEmail(employee.getEmail(), employee.getFirstName(), employee.getEmployeeCode(), plainPassword); // Need to send password in production
+
+		} catch (FeignException e) {
+
+			String exactErrorMessage = "Authentication setup failed in upstream service.";
+			try {
+				ObjectMapper mapper = new ObjectMapper();
+				JsonNode errorNode = mapper.readTree(e.contentUTF8());
+
+				if (errorNode.has("response") && errorNode.get("response").has("message")) {
+					exactErrorMessage = errorNode.get("response").get("message").asText();
+				} else if (errorNode.has("message")) {
+					exactErrorMessage = errorNode.get("message").asText();
+				}
+			} catch (Exception parseException) {
+				log.warn("Could not parse Feign error body", parseException);
+			}
+
+			throw new MicroserviceException(e.status(),
+					"Auth Service Error for " + request.getAdminId() + ": " + exactErrorMessage);
+
+		} catch (Exception e) {
+
+			throw new MicroserviceException(500,
+					"Employee creation aborted for " + request.getAdminId() + " due to an internal system error.");
+		}
+
+		// ------------------------- end -----------//
+
+		return saved;
+	}
 
 //    @Async
 //    private void sendWelcomeEmail(String toEmail, String name, String code, String password) {

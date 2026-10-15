@@ -86,7 +86,7 @@ public class Organization {
     private Long createdBy;
 
     @CreationTimestamp
-    @Column(name = "created_on", nullable = false, length = 35)
+    @Column(name = "created_on")    // ← removed length = 35
     private LocalDateTime createdOn;
 
     @Column(name = "updated_by")
