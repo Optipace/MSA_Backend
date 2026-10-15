@@ -45,4 +45,14 @@ public class AssessmentController {
     public ResponseEntity<RetestModuleResponse> retestModule(@Valid @RequestBody RetestModuleRequest request) {
         return ResponseEntity.ok(assessmentService.retestModule(request));
     }
+
+    @PostMapping("/retestArea-defect")
+    public ResponseEntity<RetestAreaDefectResponse> retestAreaDefect(@RequestBody RetestAreaDefectRequest request) {
+        return ResponseEntity.ok(assessmentService.retestAreaDefect(request));
+    }
+
+    @PostMapping("/modules/StartIQ")
+    public ResponseEntity<StartModuleResponse> startIQTest(@Valid @RequestBody StartModuleRequest request) {
+        return ResponseEntity.ok(assessmentService.startIQTest(request.getAssessmentSessionId(), request.getAssessmentModuleInstanceId()));
+    }
 }

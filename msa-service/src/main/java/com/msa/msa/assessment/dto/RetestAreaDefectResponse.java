@@ -1,4 +1,13 @@
 package com.msa.msa.assessment.dto;
 
-public class RetestAreaDefectResponse {
-}
+import java.util.UUID;
+
+public record RetestAreaDefectResponse(
+        UUID oldAssessmentSessionId,
+        UUID newAssessmentSessionId,
+        UUID oldAssessmentModuleInstanceId,
+        UUID newAssessmentModuleInstanceId,
+        String moduleCode,
+        String moduleStatus,
+        String message
+) {}

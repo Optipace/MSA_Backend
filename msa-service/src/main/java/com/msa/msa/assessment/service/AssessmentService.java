@@ -460,4 +460,193 @@ public class AssessmentService {
         // 9. Return the old and new instance IDs
         return new RetestModuleResponse(oldInstance.getAssessmentModuleInstanceId(), savedInstance.getAssessmentModuleInstanceId(), module.getModuleCode(), module.getModuleName(), savedInstance.getModuleStatus().getStatusCode(), savedInstance.getCreatedOn());
     }
+
+    @Transactional
+    public RetestAreaDefectResponse retestAreaDefect(
+            RetestAreaDefectRequest request) {
+
+        // 1. Validate request
+        if (request == null
+                || request.getAssessmentSessionId() == null
+                || request.getAssessmentModuleInstanceId() == null) {
+            throw new BadRequestException(
+                    "Assessment session ID and module instance ID are required");
+        }
+
+        // 2. Find the old module instance and verify session ownership
+        AssessmentModuleInstance oldInstance =
+                assessmentModuleInstanceRepository
+                        .findByAssessmentModuleInstanceIdAndAssessmentAttemptAssessmentSessionAssessmentSessionId(
+                                request.getAssessmentModuleInstanceId(),
+                                request.getAssessmentSessionId())
+                        .orElseThrow(() ->
+                                new BadRequestException(
+                                        "Assessment module does not belong to this assessment"));
+
+        // 3. Prevent retesting a previously replaced instance
+        if (Boolean.TRUE.equals(oldInstance.getIsDeleted())) {
+            throw new BadRequestException(
+                    "This assessment module instance has already been replaced");
+        }
+
+        // 4. Only a completed module can be retested
+        if (oldInstance.getModuleStatus() == null
+                || !"COMPLETED".equals(
+                oldInstance.getModuleStatus().getStatusCode())) {
+            throw new BadRequestException(
+                    "Only a completed Area & Defect test can be retaken");
+        }
+
+        // 5. Verify the combined Area & Defect module.
+        // Your current GarmentService identifies this workflow as DEFECT.
+        AssessmentModule module =
+                assessmentModuleRepository
+                        .findById(oldInstance.getAssessmentModuleId())
+                        .orElseThrow(() ->
+                                new BadRequestException(
+                                        "Assessment module configuration not found"));
+
+        if (!"DEFECT".equals(module.getModuleCode())) {
+            throw new BadRequestException(
+                    "Retest is allowed only for the combined Area & Defect test");
+        }
+
+        AssessmentSession oldSession =
+                oldInstance.getAssessmentAttempt().getAssessmentSession();
+
+        OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+
+        // 6. Load initial session status
+        AssessmentStatus assignedStatus =
+                assessmentStatusRepository
+                        .findByStatusCode("ASSIGNED")
+                        .orElseThrow(() ->
+                                new BadRequestException(
+                                        "ASSIGNED assessment status is not configured"));
+
+        // 7. Load AVAILABLE module status
+        ModuleStatus availableStatus =
+                moduleStatusRepository
+                        .findByStatusCode("AVAILABLE")
+                        .orElseThrow(() ->
+                                new BadRequestException(
+                                        "AVAILABLE module status is not configured"));
+
+        // 8. Create a new assessment session
+        AssessmentSession newSession = new AssessmentSession();
+
+        newSession.setAssessmentNo("RT-" + UUID.randomUUID());
+        newSession.setEmployeeId(oldSession.getEmployeeId());
+
+        // A new garment must be scanned for this new session
+        newSession.setGarmentInstanceId(null);
+
+        newSession.setAssessmentTemplateId(
+                oldSession.getAssessmentTemplateId());
+        newSession.setAssessmentCycleId(
+                oldSession.getAssessmentCycleId());
+
+        newSession.setAssignedBy(oldSession.getAssignedBy());
+        newSession.setAssignedOn(now);
+        newSession.setScheduledOn(null);
+        newSession.setStartedOn(null);
+        newSession.setCompletedOn(null);
+
+        newSession.setAssessmentStatus(assignedStatus);
+        newSession.setTotalScore(null);
+        newSession.setPercentage(null);
+        newSession.setCompetencyRatingId(null);
+        newSession.setRemarks("Area & Defect retest");
+
+        newSession.setCreatedBy(oldSession.getCreatedBy());
+        newSession.setCreatedOn(now);
+        newSession.setRecordStatus("A");
+
+        newSession = assessmentSessionRepository.save(newSession);
+
+        // 9. Create a new attempt for the new session
+        AssessmentAttempt newAttempt = new AssessmentAttempt();
+
+        newAttempt.setAssessmentSession(newSession);
+        newAttempt.setAttemptNo(1);
+        newAttempt.setStartedOn(null);
+        newAttempt.setCompletedOn(null);
+        newAttempt.setTotalScore(null);
+        newAttempt.setPercentage(null);
+        newAttempt.setResult(null);
+        newAttempt.setRemarks("Area & Defect retest");
+        newAttempt.setCreatedOn(now);
+        newAttempt.setRecordStatus("A");
+
+        newAttempt = assessmentAttemptRepository.save(newAttempt);
+
+        // 10. Create exactly ONE new module instance
+        AssessmentModuleInstance newInstance =
+                new AssessmentModuleInstance();
+
+        // Reuse the same module configuration; do not create a master module
+        newInstance.setAssessmentModuleId(
+                oldInstance.getAssessmentModuleId());
+
+        newInstance.setSequenceNo(oldInstance.getSequenceNo());
+        newInstance.setAssessmentAttempt(newAttempt);
+        newInstance.setModuleStatus(availableStatus);
+        newInstance.setCreatedOn(now);
+        newInstance.setIsDeleted(false);
+
+        newInstance =
+                assessmentModuleInstanceRepository.save(newInstance);
+
+        // 11. Soft-delete the original instance
+        oldInstance.setIsDeleted(true);
+        assessmentModuleInstanceRepository.save(oldInstance);
+
+        // 12. Return the new identifiers
+        return new RetestAreaDefectResponse(
+                oldSession.getAssessmentSessionId(),
+                newSession.getAssessmentSessionId(),
+                oldInstance.getAssessmentModuleInstanceId(),
+                newInstance.getAssessmentModuleInstanceId(),
+                module.getModuleCode(),
+                newInstance.getModuleStatus().getStatusCode(),
+                "Area & Defect retest session created successfully"
+        );
+    }
+
+    public StartModuleResponse startIQTest(
+            UUID assessmentSessionId,
+            UUID assessmentModuleInstanceId) {
+
+        AssessmentModuleInstance moduleInstance =
+                assessmentModuleInstanceRepository
+                        .findByAssessmentModuleInstanceIdAndAssessmentAttemptAssessmentSessionAssessmentSessionId(
+                                assessmentModuleInstanceId,
+                                assessmentSessionId
+                        )
+                        .orElseThrow(() -> new BadRequestException(
+                                "Assessment module does not belong to this assessment"
+                        ));
+
+        AssessmentModule module =
+                assessmentModuleRepository
+                        .findById(moduleInstance.getAssessmentModuleId())
+                        .orElseThrow(() -> new BadRequestException(
+                                "Assessment module configuration not found"
+                        ));
+
+        if (!"IQ".equalsIgnoreCase(module.getModuleCode())) {
+            throw new BadRequestException(
+                    "This API can only start the IQ test"
+            );
+        }
+
+        return new StartModuleResponse(
+                moduleInstance.getAssessmentModuleInstanceId(),
+                module.getModuleCode(),
+                module.getModuleName(),
+                moduleInstance.getModuleStatus().getStatusCode(),
+                moduleInstance.getStartedOn()
+        );
+    }
+
 }
