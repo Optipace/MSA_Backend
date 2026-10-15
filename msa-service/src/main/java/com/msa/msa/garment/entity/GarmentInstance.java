@@ -64,4 +64,8 @@ public class GarmentInstance {
 
     @Column(name = "garment_lot_id", nullable = false)
     private UUID garmentLotId;
+
+    @Column(name = "batch_id")
+    private String batchId;
+
 }
