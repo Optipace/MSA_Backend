@@ -21,7 +21,7 @@ public class GarmentDefectController {
     private final GarmentDefectService garmentDefectService;
 
     @PostMapping("/v1/submit")
-    @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'FACTORY_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'FACTORY_ADMIN')")  
     public ResponseEntity<SingleResponse<GarmentDefectSubmissionResponse>>
             submitGarmentDefects(
                     @Valid @RequestBody GarmentDefectSubmissionRequest request,
