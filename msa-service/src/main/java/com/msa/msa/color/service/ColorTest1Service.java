@@ -303,12 +303,17 @@ public class ColorTest1Service {
         assessmentModuleInstanceRepository.save(moduleInstance);
 
         // 11. Find next module
+//        List<AssessmentModuleInstance> moduleInstances =
+//                assessmentModuleInstanceRepository
+//                        .findByAssessmentAttemptAssessmentAttemptIdOrderBySequenceNo(
+//                                moduleInstance.getAssessmentAttempt()
+//                                        .getAssessmentAttemptId()
+//                        );
         List<AssessmentModuleInstance> moduleInstances =
                 assessmentModuleInstanceRepository
-                        .findByAssessmentAttemptAssessmentAttemptIdOrderBySequenceNo(
-                                moduleInstance.getAssessmentAttempt()
-                                        .getAssessmentAttemptId()
-                        );
+                        .findByAssessmentAttemptAssessmentAttemptIdAndIsDeletedFalseOrderBySequenceNo(moduleInstance.getAssessmentAttempt()
+                                .getAssessmentAttemptId());
+
 
         String nextModuleCode = null;
 

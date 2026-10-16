@@ -81,9 +81,8 @@ public class ScoringService {
 
         // 3. Get module instances
         List<AssessmentModuleInstance> moduleInstances =
-                assessmentModuleInstanceRepository
-                        .findByAssessmentAttemptAssessmentAttemptIdOrderBySequenceNo(
-                                attempt.getAssessmentAttemptId());
+                assessmentModuleInstanceRepository.findByAssessmentAttemptAssessmentAttemptIdAndIsDeletedFalseOrderBySequenceNo(
+                        attempt.getAssessmentAttemptId());
 
         // 4. Read module codes
         Map<String, AssessmentModuleInstance> modules = new HashMap<>();

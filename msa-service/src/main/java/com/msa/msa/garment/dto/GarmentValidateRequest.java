@@ -13,5 +13,5 @@ public class GarmentValidateRequest {
 
     private UUID assessmentModuleInstanceId;
 
-    private String barcode;
+    private String batchId;
 }

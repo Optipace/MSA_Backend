@@ -9,4 +9,6 @@ import java.util.UUID;
 public interface GarmentInstanceRepository extends JpaRepository<GarmentInstance, UUID> {
 
     Optional<GarmentInstance> findByBarcode(String barcode);
+
+    Optional<GarmentInstance> findByBatchId(Long batchId);
 }

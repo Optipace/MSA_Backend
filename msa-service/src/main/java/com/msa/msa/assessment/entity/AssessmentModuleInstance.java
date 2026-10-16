@@ -52,6 +52,9 @@ public class AssessmentModuleInstance {
     @Column(name = "created_on", nullable = false)
     private OffsetDateTime createdOn;
 
+    @Column(name = "is_deleted", nullable = false)
+    private Boolean isDeleted = false;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(
         name = "assessment_attempt_id",

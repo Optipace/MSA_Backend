@@ -91,9 +91,9 @@ public class GarmentService {
                     "Assessment module instance ID is required");
         }
 
-        if (request.getBarcode() == null
-                || request.getBarcode().trim().isEmpty()) {
-            throw new BadRequestException("Barcode is required");
+        if (request.getBatchId() == null
+                || request.getBatchId().trim().isEmpty()) {
+            throw new BadRequestException("BatchID is required");
         }
 
         // 1. Find module instance and verify ownership
@@ -117,7 +117,7 @@ public class GarmentService {
         // 3. Verify DEFECT module
         if (!DEFECT_MODULE_CODE.equals(module.getModuleCode())) {
             throw new BadRequestException(
-                    "Garment identification must be performed in the Defect module");
+                    "Garment identification must be performed in the AREA_DEFECT module");
         }
 
         // 4. DEFECT must already be IN_PROGRESS
@@ -125,7 +125,7 @@ public class GarmentService {
                 moduleInstance.getModuleStatus().getStatusCode())) {
 
             throw new BadRequestException(
-                    "Defect identification must be started before scanning a garment");
+                    "AREA_DEFECT identification must be started before scanning a garment");
         }
 
         // 5. Get assessment session
@@ -133,13 +133,13 @@ public class GarmentService {
                 moduleInstance.getAssessmentAttempt()
                         .getAssessmentSession();
 
-        // 6. Find garment by barcode
+        // 6. Find garment by batchid
         GarmentInstance garment =
                 garmentInstanceRepository
-                        .findByBarcode(request.getBarcode().trim())
+                        .findByBatchId(Long.valueOf(request.getBatchId().trim()))
                         .orElseThrow(() ->
                                 new BadRequestException(
-                                        "Garment not found for the provided barcode"));
+                                        "Garment not found for the provided batchID"));
 
         // 7. Validate garment status
         if ("REJECTED".equals(garment.getCurrentStatus())) {
@@ -502,60 +502,58 @@ public class GarmentService {
         assessmentModuleInstanceRepository.save(
                 defectModuleInstance);
 
-        // 18. Find AREA module instance belonging to
-        // the SAME assessment attempt
-        AssessmentModuleInstance areaModuleInstance = null;
+//below code is commented because initially there are two tests AREA,DEFECT now we have combined this test which is AREA&DEFECT Identification
+//        // 18. Find AREA module instance belonging to
+//        // the SAME assessment attempt
+//        AssessmentModuleInstance areaModuleInstance = null;
 
-        List<AssessmentModuleInstance> moduleInstances =
-                assessmentModuleInstanceRepository
-                        .findByAssessmentAttemptAssessmentAttemptIdOrderBySequenceNo(
-                                defectModuleInstance
-                                        .getAssessmentAttempt()
-                                        .getAssessmentAttemptId());
+        List<AssessmentModuleInstance> moduleInstances = assessmentModuleInstanceRepository
+                .findByAssessmentAttemptAssessmentAttemptIdAndIsDeletedFalseOrderBySequenceNo(
+                        defectModuleInstance.getAssessmentAttempt().getAssessmentAttemptId());
+//
+//        for (AssessmentModuleInstance instance :
+//                moduleInstances) {
+//
+//            AssessmentModule instanceModule =
+//                    assessmentModuleRepository
+//                            .findById(
+//                                    instance.getAssessmentModuleId())
+//                            .orElse(null);
+//
+//            if (instanceModule == null) {
+//                continue;
+//            }
+//
+//            if (AREA_MODULE_CODE.equals(
+//                    instanceModule.getModuleCode())) {
+//
+//                areaModuleInstance = instance;
+//                break;
+//            }
+//        }
+//
+//        if (areaModuleInstance == null) {
+//            throw new BadRequestException(
+//                    "AREA module instance not found for this assessment");
+//        }
 
-        for (AssessmentModuleInstance instance :
-                moduleInstances) {
-
-            AssessmentModule instanceModule =
-                    assessmentModuleRepository
-                            .findById(
-                                    instance.getAssessmentModuleId())
-                            .orElse(null);
-
-            if (instanceModule == null) {
-                continue;
-            }
-
-            if (AREA_MODULE_CODE.equals(
-                    instanceModule.getModuleCode())) {
-
-                areaModuleInstance = instance;
-                break;
-            }
-        }
-
-        if (areaModuleInstance == null) {
-            throw new BadRequestException(
-                    "AREA module instance not found for this assessment");
-        }
-
-        // 19. Complete AREA module
-        areaModuleInstance.setModuleStatus(
-                completedStatus);
-
-        areaModuleInstance.setCompletedOn(now);
-
-        areaModuleInstance.setObtainedScore(
-                areaScore);
-
-        areaModuleInstance.setMaximumScore(
-                BigDecimal.valueOf(100));
-
-        areaModuleInstance.setPercentage(
-                areaScore);
-
-        assessmentModuleInstanceRepository.save(
-                areaModuleInstance);
+//        // 19. Complete AREA module
+//        areaModuleInstance.setModuleStatus(
+//                completedStatus);
+//
+//        areaModuleInstance.setCompletedOn(now);
+//
+//        areaModuleInstance.setObtainedScore(
+//                areaScore);
+//
+//        areaModuleInstance.setMaximumScore(
+//                BigDecimal.valueOf(100));
+//
+//        areaModuleInstance.setPercentage(
+//                areaScore);
+//
+//        assessmentModuleInstanceRepository.save(
+//                areaModuleInstance);
 
         // 20. Find next module after sequence 4
         String nextModuleCode = null;
