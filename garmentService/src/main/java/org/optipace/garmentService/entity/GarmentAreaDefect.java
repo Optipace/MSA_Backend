@@ -20,7 +20,7 @@ import java.time.OffsetDateTime;
     uniqueConstraints = {
         @UniqueConstraint(
             name = "uk_garment_area_defect",
-            columnNames = {"garment_area_id", "defect_id"}
+            columnNames = {"garment_batch_id","garment_area_id", "defect_id"}
         )
     },
     indexes = {
@@ -44,8 +44,12 @@ public class GarmentAreaDefect {
     @Column(name = "defect_id", nullable = false)
     private Long defectId;
     
+ // ===== FK: garment_batch =====
+    @Column(name = "garment_batch_id")
+    private Long garmentBatchId;
+    
     // ===== FK: severity_level (cross-schema → config) =====
-    @Column(name = "severity_level_id", nullable = false)
+    @Column(name = "severity_level_id")
     private Long severityLevelId;
     
     // ===== BUSINESS FIELDS =====

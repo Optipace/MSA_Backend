@@ -12,17 +12,18 @@ import java.math.BigDecimal;
 @NoArgsConstructor
 @AllArgsConstructor
 public class GarmentAreaDefectUpdateRequest {
+	
+	@NotNull(message = "Garment batch ID is required")
+	private Long garmentBatchId;
     @NotNull(message = "Garment area ID is required")
     private Long garmentAreaId;
     @NotNull(message = "Defect ID is required")
     private Long defectId;
-    @NotNull(message = "Severity level ID is required")
     private Long severityLevelId;
     private BigDecimal maxDeductionMarks;
     private Boolean isMandatory;
     private BigDecimal aiConfidenceThreshold;
     @Size(max = 500, message = "Remarks must not exceed 500 characters")
     private String remarks;
-    @NotNull(message = "Record status is required")
     private String recordStatus;
 }

@@ -22,7 +22,7 @@ public class UpdateGarmentBatchRequest {
     @Size(max = 100, message = "Garment ID must not exceed 100 characters")
     private String garmentId;
 
-    @NotBlank(message = "Garment code is required")
-    @Size(max = 100, message = "Garment code must not exceed 100 characters")
-    private String garmentCode;
+    @NotBlank(message = "Garment name is required")
+    @Size(max = 100, message = "Garment name must not exceed 100 characters")
+    private String garmentName;
 }

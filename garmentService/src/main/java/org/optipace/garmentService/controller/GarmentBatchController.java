@@ -4,6 +4,8 @@ package org.optipace.garmentService.controller;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
+import java.util.List;
+
 import org.optipace.garmentService.dto.request.AddGarmentBatchRequest;
 import org.optipace.garmentService.dto.request.UpdateGarmentBatchRequest;
 import org.optipace.garmentService.dto.response.GarmentBatchResponse;
@@ -37,7 +39,7 @@ public class GarmentBatchController {
     }
 
     @GetMapping("/v1/all")
-    @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'FACTORY_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'FACTORY_ADMIN', 'ASSESSOR')")
     public ResponseEntity<
             SingleResponse<PageResponse<GarmentBatchResponse>>>
             getAllGarmentBatches(
@@ -72,6 +74,15 @@ public class GarmentBatchController {
         return ResponseEntity.ok(
                 garmentBatchService.updateGarmentBatch(
                         garmentBatchId, request, adminId)
+        );
+    }
+    @GetMapping("/batch/{batchId}/garments")
+    @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'FACTORY_ADMIN')")
+    public ResponseEntity<SingleResponse<List<GarmentBatchResponse>>>
+            getGarmentsByBatchId(@PathVariable Long batchId) {
+
+        return ResponseEntity.ok(
+                garmentBatchService.getGarmentsByBatchId(batchId)
         );
     }
 }

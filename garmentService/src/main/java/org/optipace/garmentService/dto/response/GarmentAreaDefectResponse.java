@@ -13,6 +13,7 @@ import java.time.OffsetDateTime;
 public class GarmentAreaDefectResponse {
 
     private Long garmentAreaDefectId;
+    private Long garmentBatchId;
     private Long garmentAreaId;
     private Long defectId;
     private Long severityLevelId;

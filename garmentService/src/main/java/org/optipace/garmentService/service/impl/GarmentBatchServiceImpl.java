@@ -49,7 +49,7 @@ public class GarmentBatchServiceImpl implements GarmentBatchService {
                 request.getBatchId(),
                 request.getProductCategoryId(),
                 request.getGarmentId(),
-                request.getGarmentCode()
+                request.getGarmentName()
         );
 
         if (!batchRepository.existsById(request.getBatchId())) {
@@ -58,16 +58,16 @@ public class GarmentBatchServiceImpl implements GarmentBatchService {
             );
         }
 
-        String garmentCode = request.getGarmentCode().trim();
+        String garmentId = request.getGarmentId().trim();
+        String garmentName = request.getGarmentName().trim();
 
-        // Garment code must be unique only within the selected batch.
         if (garmentBatchRepository
-                .existsByBatchIdAndGarmentCodeIgnoreCase(
+                .existsByBatchIdAndGarmentIdIgnoreCase(
                         request.getBatchId(),
-                        garmentCode)) {
+                        garmentId)) {
 
             throw new BadRequestException(
-                    "Garment code '" + garmentCode
+                    "Garment ID '" + garmentId
                             + "' already exists in batch "
                             + request.getBatchId()
             );
@@ -76,8 +76,8 @@ public class GarmentBatchServiceImpl implements GarmentBatchService {
         GarmentBatch entity = new GarmentBatch();
         entity.setBatchId(request.getBatchId());
         entity.setProductCategoryId(request.getProductCategoryId());
-        entity.setGarmentId(request.getGarmentId().trim());
-        entity.setGarmentCode(garmentCode);
+        entity.setGarmentId(garmentId);
+        entity.setGarmentName(garmentName);
 
         garmentBatchRepository.saveAndFlush(entity);
 
@@ -181,7 +181,7 @@ public class GarmentBatchServiceImpl implements GarmentBatchService {
                 request.getBatchId(),
                 request.getProductCategoryId(),
                 request.getGarmentId(),
-                request.getGarmentCode()
+                request.getGarmentName()
         );
 
         if (!batchRepository.existsById(request.getBatchId())) {
@@ -190,17 +190,18 @@ public class GarmentBatchServiceImpl implements GarmentBatchService {
             );
         }
 
-        String garmentCode = request.getGarmentCode().trim();
+        String garmentId = request.getGarmentId().trim();
 
-        // Exclude the current record when checking for duplicates.
+        // Prevent duplicate garment IDs within the same batch,
+        // excluding the current record.
         if (garmentBatchRepository
-                .existsByBatchIdAndGarmentCodeIgnoreCaseAndGarmentBatchIdNot(
+                .existsByBatchIdAndGarmentIdIgnoreCaseAndGarmentBatchIdNot(
                         request.getBatchId(),
-                        garmentCode,
+                        garmentId,
                         garmentBatchId)) {
 
             throw new BadRequestException(
-                    "Garment code '" + garmentCode
+                    "Garment ID '" + garmentId
                             + "' already exists in batch "
                             + request.getBatchId()
             );
@@ -208,8 +209,8 @@ public class GarmentBatchServiceImpl implements GarmentBatchService {
 
         existing.setBatchId(request.getBatchId());
         existing.setProductCategoryId(request.getProductCategoryId());
-        existing.setGarmentId(request.getGarmentId().trim());
-        existing.setGarmentCode(garmentCode);
+        existing.setGarmentId(garmentId);
+        existing.setGarmentName(request.getGarmentName().trim());
 
         garmentBatchRepository.saveAndFlush(existing);
 
@@ -223,11 +224,36 @@ public class GarmentBatchServiceImpl implements GarmentBatchService {
         );
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public SingleResponse<List<GarmentBatchResponse>> getGarmentsByBatchId(
+            Long batchId) {
+
+        if (batchId == null || batchId <= 0) {
+            throw new BadRequestException(
+                    "Batch ID must be a positive number"
+            );
+        }
+
+        if (!batchRepository.existsById(batchId)) {
+            throw new NotFoundException(
+                    "Batch not found with ID: " + batchId
+            );
+        }
+
+        List<GarmentBatchResponse> garments = garmentBatchRepository
+                .findByBatchId(batchId)
+                .stream()
+                .map(this::mapToResponse)
+                .toList();
+
+        return SingleResponse.success(garments);
+    }
     private void validateRequest(
             Long batchId,
             Long productCategoryId,
             String garmentId,
-            String garmentCode) {
+            String garmentName) {
 
         if (batchId == null || batchId <= 0) {
             throw new BadRequestException(
@@ -247,9 +273,9 @@ public class GarmentBatchServiceImpl implements GarmentBatchService {
             );
         }
 
-        if (garmentCode == null || garmentCode.isBlank()) {
+        if (garmentName == null || garmentName.isBlank()) {
             throw new BadRequestException(
-                    "Garment code is required"
+                    "Garment name is required"
             );
         }
     }
@@ -260,15 +286,7 @@ public class GarmentBatchServiceImpl implements GarmentBatchService {
                 entity.getBatchId(),
                 entity.getProductCategoryId(),
                 entity.getGarmentId(),
-                entity.getGarmentCode()
+                entity.getGarmentName()
         );
     }
 }
-
-
-
-
-
-
-
-
