@@ -20,6 +20,7 @@ import org.optipace.garmentService.repository.GarmentBatchRepository;
 import org.optipace.garmentService.repository.GarmentAreaRepository;
 import org.optipace.garmentService.repository.DefectMasterRepository;
 import org.optipace.garmentService.service.GarmentAreaDefectService;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -95,6 +96,7 @@ public class GarmentAreaDefectServiceImpl
         validateDefectId(defectId);
     }
 
+    // CREATE GARMENT AREA DEFECT
     @Override
     @Transactional
     public SingleResponse<?> createGarmentAreaDefect(
@@ -107,14 +109,14 @@ public class GarmentAreaDefectServiceImpl
             );
         }
 
-        // 1. Validate all three referenced IDs.
+        // 1. Validate referenced IDs.
         validateReferences(
                 request.getGarmentBatchId(),
                 request.getGarmentAreaId(),
                 request.getDefectId()
         );
 
-        // 2. Check duplicate mapping.
+        // 2. Check duplicate mapping within the batch.
         boolean exists = garmentAreaDefectRepository
                 .existsByGarmentBatchIdAndGarmentAreaIdAndDefectId(
                         request.getGarmentBatchId(),
@@ -172,15 +174,23 @@ public class GarmentAreaDefectServiceImpl
         );
     }
 
+    // GET GARMENT AREA DEFECT BY ID
     @Override
     @Transactional(readOnly = true)
     public SingleResponse<GarmentAreaDefectResponse>
             getGarmentAreaDefectById(Long garmentAreaDefectId) {
 
+        if (garmentAreaDefectId == null || garmentAreaDefectId <= 0) {
+            throw new BadRequestException(
+                    "Garment area defect ID must be positive."
+            );
+        }
+
         GarmentAreaDefect entity =
                 garmentAreaDefectRepository.findById(garmentAreaDefectId)
                         .orElseThrow(() -> new NotFoundException(
-                                "Garment area defect not found"
+                                "Garment area defect not found with ID: "
+                                        + garmentAreaDefectId
                         ));
 
         GarmentAreaDefectResponse response =
@@ -192,6 +202,7 @@ public class GarmentAreaDefectServiceImpl
         return SingleResponse.success(response);
     }
 
+    // GET ALL GARMENT AREA DEFECTS
     @Override
     @Transactional(readOnly = true)
     public SingleResponse<PageResponse<ListOfGarmentAreaDefectResponse>>
@@ -221,8 +232,33 @@ public class GarmentAreaDefectServiceImpl
 
         return SingleResponse.success(pageResponse);
     }
-   
 
+    // GET ALL AREA-DEFECT MAPPINGS BY GARMENT BATCH ID
+    @Override
+    @Transactional(readOnly = true)
+    public SingleResponse<List<ListOfGarmentAreaDefectResponse>>
+            getGarmentAreaDefectsByGarmentBatchId(Long garmentBatchId) {
+
+        if (garmentBatchId == null || garmentBatchId <= 0) {
+            throw new BadRequestException(
+                    "Garment batch ID must be a positive number."
+            );
+        }
+
+        List<ListOfGarmentAreaDefectResponse> content =
+                garmentAreaDefectRepository
+                        .findByGarmentBatchId(garmentBatchId)
+                        .stream()
+                        .map(entity -> modelMapper.map(
+                                entity,
+                                ListOfGarmentAreaDefectResponse.class
+                        ))
+                        .toList();
+
+        return SingleResponse.success(content);
+    }
+
+    // UPDATE GARMENT AREA DEFECT
     @Override
     @Transactional
     public SingleResponse<?> updateGarmentAreaDefect(
@@ -236,14 +272,21 @@ public class GarmentAreaDefectServiceImpl
             );
         }
 
-        // 1. Find existing record
+        if (garmentAreaDefectId == null || garmentAreaDefectId <= 0) {
+            throw new BadRequestException(
+                    "Garment area defect ID must be positive."
+            );
+        }
+
+        // 1. Find existing record.
         GarmentAreaDefect entity =
                 garmentAreaDefectRepository.findById(garmentAreaDefectId)
                         .orElseThrow(() -> new NotFoundException(
-                                "Garment area defect not found"
+                                "Garment area defect not found with ID: "
+                                        + garmentAreaDefectId
                         ));
 
-        // 2. Resolve final values
+        // 2. Resolve final values.
         Long garmentBatchId =
                 request.getGarmentBatchId() != null
                         ? request.getGarmentBatchId()
@@ -259,14 +302,14 @@ public class GarmentAreaDefectServiceImpl
                         ? request.getDefectId()
                         : entity.getDefectId();
 
-        // 3. Validate references
+        // 3. Validate references.
         validateReferences(
                 garmentBatchId,
                 garmentAreaId,
                 defectId
         );
 
-        // 4. Check duplicate mapping
+        // 4. Check duplicate mapping if the combination changed.
         boolean combinationChanged =
                 !Objects.equals(
                         garmentBatchId,
@@ -297,12 +340,12 @@ public class GarmentAreaDefectServiceImpl
             }
         }
 
-        // 5. Update IDs
+        // 5. Update reference IDs.
         entity.setGarmentBatchId(garmentBatchId);
         entity.setGarmentAreaId(garmentAreaId);
         entity.setDefectId(defectId);
 
-        // 6. Update remaining fields when supplied
+        // 6. Update remaining fields when supplied.
         if (request.getSeverityLevelId() != null) {
             entity.setSeverityLevelId(
                     request.getSeverityLevelId()
@@ -327,18 +370,18 @@ public class GarmentAreaDefectServiceImpl
             );
         }
 
-     // Preserve remarks unless new remarks are provided
+        // Preserve remarks unless new remarks are provided.
         if (request.getRemarks() != null) {
             entity.setRemarks(request.getRemarks());
         }
 
-        // Set record status to U after update
+        // 7. Set record status to U after update.
         entity.setRecordStatus('U');
 
-        // 8. Set updated-by user
+        // 8. Set updated-by user.
         entity.setUpdatedBy(Long.parseLong(userId));
 
-        // 9. Save updated record
+        // 9. Save updated record.
         GarmentAreaDefect saved =
                 garmentAreaDefectRepository.save(entity);
 
@@ -354,6 +397,7 @@ public class GarmentAreaDefectServiceImpl
         );
     }
 
+//    // SOFT DELETE GARMENT AREA DEFECT
 //    @Override
 //    @Transactional
 //    public SingleResponse<?> deleteGarmentAreaDefect(
@@ -366,7 +410,6 @@ public class GarmentAreaDefectServiceImpl
 //                                "Garment area defect not found"
 //                        ));
 //
-//        // Soft delete.
 //        entity.setRecordStatus('D');
 //        entity.setUpdatedBy(Long.parseLong(userId));
 //

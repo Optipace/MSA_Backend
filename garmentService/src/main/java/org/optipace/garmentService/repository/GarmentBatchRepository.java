@@ -1,9 +1,8 @@
 
 package org.optipace.garmentService.repository;
 
-import java.util.Optional;
+import java.util.List;
 
-import org.optipace.garmentService.entity.GarmentAreaDefect;
 import org.optipace.garmentService.entity.GarmentBatch;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
@@ -12,17 +11,21 @@ import org.springframework.stereotype.Repository;
 public interface GarmentBatchRepository
         extends JpaRepository<GarmentBatch, Long> {
 
-    // Check whether the garment code already exists in this batch.
-    boolean existsByBatchIdAndGarmentCodeIgnoreCase(
+    // Check whether the garment ID already exists in this batch.
+    boolean existsByBatchIdAndGarmentIdIgnoreCase(
             Long batchId,
-            String garmentCode
+            String garmentId
     );
 
     // Update check: exclude the current record.
-    boolean existsByBatchIdAndGarmentCodeIgnoreCaseAndGarmentBatchIdNot(
+    boolean existsByBatchIdAndGarmentIdIgnoreCaseAndGarmentBatchIdNot(
             Long batchId,
-            String garmentCode,
+            String garmentId,
             Long garmentBatchId
     );
 
-    boolean existsByGarmentBatchId(Long garmentBatchId);}
+    boolean existsByGarmentBatchId(Long garmentBatchId);
+
+    // Fetch all garments belonging to a specific batch.
+    List<GarmentBatch> findByBatchId(Long batchId);
+}

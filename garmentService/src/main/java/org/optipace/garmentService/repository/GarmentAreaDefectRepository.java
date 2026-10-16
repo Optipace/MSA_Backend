@@ -39,4 +39,6 @@ public interface GarmentAreaDefectRepository
     );
 
 	Optional<GarmentAreaDefect> findByGarmentAreaDefectIdAndRecordStatus(Long garmentAreaDefectId, char c);
+	
+	List<GarmentAreaDefect> findByGarmentBatchId(Long garmentBatchId);
 }

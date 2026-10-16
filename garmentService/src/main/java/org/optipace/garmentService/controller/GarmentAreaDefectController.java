@@ -3,6 +3,9 @@ package org.optipace.garmentService.controller;
 import jakarta.validation.Valid;
 
 import lombok.RequiredArgsConstructor;
+
+import java.util.List;
+
 import org.optipace.garmentService.dto.request.GarmentAreaDefectRequest;
 import org.optipace.garmentService.dto.request.GarmentAreaDefectUpdateRequest;
 import org.optipace.garmentService.dto.response.GarmentAreaDefectResponse;
@@ -43,12 +46,27 @@ public class GarmentAreaDefectController {
         Pageable pageable = PageRequest.of(page, size);
         return ResponseEntity.ok(garmentAreaDefectService.getAllGarmentAreaDefects(pageable));
     }
+    
+    @GetMapping("/garmentBatchId/{garmentBatchId}")
+    @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'FACTORY_ADMIN', 'ASSESSOR')")
+    public ResponseEntity<
+            SingleResponse<List<ListOfGarmentAreaDefectResponse>>>
+            getGarmentAreaDefectsByBatchId(
+                    @PathVariable Long garmentBatchId) {
+
+        return ResponseEntity.ok(
+                garmentAreaDefectService
+                        .getGarmentAreaDefectsByGarmentBatchId(garmentBatchId)
+        );
+    }
 
     @PatchMapping("/v1/update/{garmentAreaDefectId}")
     @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'FACTORY_ADMIN')")
     public ResponseEntity<SingleResponse<?>> updateGarmentAreaDefect(@PathVariable Long garmentAreaDefectId, @Valid @RequestBody GarmentAreaDefectUpdateRequest request, @RequestHeader("X-User-Id") String userId) {
         return ResponseEntity.ok(garmentAreaDefectService.updateGarmentAreaDefect(garmentAreaDefectId, request, userId));
     }
+    
+   
 
 //    @DeleteMapping("/v1/delete/{garmentAreaDefectId}")
 //    @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'FACTORY_ADMIN')")

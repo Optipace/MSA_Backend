@@ -1,6 +1,8 @@
 
 package org.optipace.garmentService.service;
 
+import java.util.List;
+
 import org.optipace.garmentService.dto.request.AddGarmentBatchRequest;
 import org.optipace.garmentService.dto.request.UpdateGarmentBatchRequest;
 import org.optipace.garmentService.dto.response.GarmentBatchResponse;
@@ -28,4 +30,6 @@ public interface GarmentBatchService {
             UpdateGarmentBatchRequest request,
             String adminId
     );
-}
+    
+    SingleResponse<List<GarmentBatchResponse>> getGarmentsByBatchId(
+            Long batchId);}

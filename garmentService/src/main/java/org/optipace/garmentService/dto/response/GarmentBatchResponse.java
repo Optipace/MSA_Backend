@@ -13,5 +13,5 @@ public class GarmentBatchResponse {
     private Long batchId;
     private Long productCategoryId;
     private String garmentId;
-    private String garmentCode;
+    private String garmentName;
 }
