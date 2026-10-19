@@ -84,7 +84,7 @@ public class GarmentBatchServiceImpl implements GarmentBatchService {
         log.info("Garment batch record created successfully");
 
         return SingleResponse.success(
-                "Garment batch created successfully"
+                "Garment is added in batch successfully"
         );
     }
 

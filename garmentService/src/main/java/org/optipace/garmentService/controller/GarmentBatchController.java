@@ -54,7 +54,7 @@ public class GarmentBatchController {
     }
 
     @GetMapping("/v1/{garmentBatchId}")
-    @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'FACTORY_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'FACTORY_ADMIN', 'ASSESSOR')")
     public ResponseEntity<SingleResponse<GarmentBatchResponse>>
             getGarmentBatchById(
                     @PathVariable Long garmentBatchId) {
@@ -77,7 +77,7 @@ public class GarmentBatchController {
         );
     }
     @GetMapping("/batch/{batchId}/garments")
-    @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'FACTORY_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'FACTORY_ADMIN', 'ASSESSOR')")
     public ResponseEntity<SingleResponse<List<GarmentBatchResponse>>>
             getGarmentsByBatchId(@PathVariable Long batchId) {
 
