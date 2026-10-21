@@ -5,8 +5,10 @@ import lombok.extern.slf4j.Slf4j;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.optipace.adminService.dto.request.CreateOrderRequest;
 import org.optipace.adminService.dto.request.PaymentCallbackRequestDto;
 import org.optipace.adminService.dto.request.PurchaseRequestDto;
+import org.optipace.adminService.dto.response.CreateOrderResponse;
 import org.optipace.adminService.dto.response.PaymentResponse;
 import org.optipace.adminService.dto.response.PurchaseResponse;
 import org.optipace.adminService.dto.response.SingleResponse;
@@ -20,12 +22,15 @@ import org.optipace.adminService.exception.BadRequestException;
 import org.optipace.adminService.exception.ResourceNotFoundException;
 import org.optipace.adminService.repository.*;
 import org.optipace.adminService.service.PurchaseService;
+import org.optipace.adminService.service.RazorpayOrderService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.optipace.adminService.dto.response.BillingHistoryResponse;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -41,6 +46,8 @@ public class PurchaseServiceImpl implements PurchaseService {
     private final SubscriptionPackageRepository subscriptionPackageRepository;
     private final PointTransactionRepository pointTransactionRepository;
     private final OrganizationPointsRepository organizationPointsRepository;
+    
+    private final RazorpayOrderService razorpayOrderService;
 
     // =====================================================
     // STEP 1 — FACTORY_ADMIN BUYS PACKAGE
@@ -108,26 +115,71 @@ public class PurchaseServiceImpl implements PurchaseService {
         
         OrganizationPackage savedOrgPkg = organizationPackageRepository.saveAndFlush(orgPkg);
         
-        // 4. Create Payment (PENDING)
+       // new code updated
+        
         String txnId = generateTransactionId();
-        String gatewayOrderId = "ORDER-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+
+     // Convert package price from rupees to paise
+     long amountPaise = pkg.getPrice()
+             .movePointRight(2)
+             .longValueExact();
+
+     String currency = pkg.getCurrency();
+
+  // Create Razorpay order request
+     String receipt = "OPT-" + java.util.UUID.randomUUID()
+     .toString().substring(0, 18);
+
+     
+     CreateOrderRequest rpay = new CreateOrderRequest();
+     rpay.setAmount(amountPaise);
+     rpay.setCurrency(currency);
+     rpay.setReceipt(receipt);
+
+     CreateOrderResponse response =
+             razorpayOrderService.createOrder(rpay);
+     
+     String gatewayOrderId = response.getOrderId();
+    // String gatewayOrderId = razorpayOrder.orderId();
+
+     // Create payment record with PENDING status
+     Payment payment = Payment.builder()
+             .organizationPackage(savedOrgPkg)
+             .organizationId(request.getOrganizationId())
+             .paidBy(userIdLong)
+             .amount(pkg.getPrice())
+             .currency(Currency.valueOf(currency))
+             .paymentMethod(request.getPaymentMethod())
+             .paymentStatus(PaymentStatus.PENDING)
+             .transactionId(txnId)
+             .gatewayOrderId(gatewayOrderId)
+             .build();
+
+     Payment savedPayment = paymentRepository.saveAndFlush(payment);
+
+     log.info(
+             "Purchase created. TxnId: {}, Razorpay OrderId: {}",
+             txnId,
+             gatewayOrderId
+     );
         
-        Payment payment = Payment.builder()
-            .organizationPackage(savedOrgPkg)
-            .organizationId(request.getOrganizationId())
-            .paidBy(userIdLong)
-            .amount(pkg.getPrice())
-            .currency(Currency.valueOf(pkg.getCurrency()))
-            .paymentMethod(request.getPaymentMethod())
-            .paymentStatus(PaymentStatus.PENDING)
-            .transactionId(txnId)
-            .gatewayOrderId(gatewayOrderId)
-            .build();
-        
-        Payment savedPayment = paymentRepository.saveAndFlush(payment);
-        
-        log.info("Purchase created. TxnId: {}, GatewayOrderId: {}", txnId, gatewayOrderId);
-        
+        // 4. Create Payment (PENDING)
+		/*
+		 * String txnId = generateTransactionId(); String gatewayOrderId = "ORDER-" +
+		 * UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+		 * 
+		 * Payment payment = Payment.builder() .organizationPackage(savedOrgPkg)
+		 * .organizationId(request.getOrganizationId()) .paidBy(userIdLong)
+		 * .amount(pkg.getPrice()) .currency(Currency.valueOf(pkg.getCurrency()))
+		 * .paymentMethod(request.getPaymentMethod())
+		 * .paymentStatus(PaymentStatus.PENDING) .transactionId(txnId)
+		 * .gatewayOrderId(gatewayOrderId) .build();
+		 * 
+		 * Payment savedPayment = paymentRepository.saveAndFlush(payment);
+		 * 
+		 * log.info("Purchase created. TxnId: {}, GatewayOrderId: {}", txnId,
+		 * gatewayOrderId);
+		 */        
         return new SingleResponse<PurchaseResponse>(
             buildResponse(savedPayment, savedOrgPkg, pkg),
             CustomStatus.SUCCESS
@@ -169,6 +221,36 @@ public class PurchaseServiceImpl implements PurchaseService {
         
         // 4. Handle status
         if (Boolean.TRUE.equals(callback.getSuccess())) {
+            
+        	// Verify the Razorpay order against the server-side payment record
+        	String storedOrderId = payment.getGatewayOrderId();
+            String callbackOrderId = callback.getGatewayOrderId();
+            String gatewayPaymentId = callback.getGatewayPaymentId();
+            String signature = callback.getGatewaySignature();
+
+            if (storedOrderId == null
+                    || callbackOrderId == null
+                    || gatewayPaymentId == null
+                    || signature == null) {
+                throw new IllegalArgumentException(
+                        "Missing Razorpay payment verification details");
+            }
+
+            if (!storedOrderId.equals(callbackOrderId)) {
+                throw new IllegalArgumentException(
+                        "Razorpay order ID mismatch");
+            }
+
+            boolean validSignature = razorpayOrderService.verifySignature(
+                    storedOrderId,
+                    gatewayPaymentId,
+                    signature
+            );
+
+            if (!validSignature) {
+                throw new IllegalArgumentException(
+                        "Invalid Razorpay payment signature");
+            }
             
             // =====================================================
             // ✅ SUCCESS
@@ -445,4 +527,91 @@ public class PurchaseServiceImpl implements PurchaseService {
         r.setUpdatedOn(p.getUpdatedOn());
         return r;
     }
+    
+ // =====================================================
+ // ⭐ BILLING HISTORY REPORT
+ // =====================================================
+ @Override
+ @Transactional(readOnly = true)
+ public SingleResponse<List<BillingHistoryResponse>> getBillingHistory(Long organizationId) {
+     
+     log.info("Fetching billing history for organization: {}", organizationId);
+     
+     // 1. Fetch all payments for the org, newest first
+     List<Payment> payments = paymentRepository.findByOrganizationIdOrderByPaymentDateDesc(organizationId);
+     
+     List<BillingHistoryResponse> history = new java.util.ArrayList<>();
+     
+     boolean isFirstPurchase = true;
+     
+     // 2. Iterate through payments (oldest to newest for correct logic, so reverse first if needed)
+     // Actually, let's process oldest to newest to determine "Initial Purchase"
+     List<Payment> chronologicalPayments = new java.util.ArrayList<>(payments);
+     java.util.Collections.reverse(chronologicalPayments); 
+     
+     for (Payment payment : chronologicalPayments) {
+         
+         OrganizationPackage orgPkg = payment.getOrganizationPackage();
+         if (orgPkg == null) continue;
+         
+         SubscriptionPackage pkg = orgPkg.getPackageEntity();
+         
+         // 3. Determine Transaction Type & Package Name
+         String transactionType;
+         String packageName;
+         
+         if (isFirstPurchase) {
+             transactionType = "Initial Purchase";
+             packageName = pkg != null ? pkg.getPackageName() : "Unknown";
+             isFirstPurchase = false;
+         } else {
+             transactionType = "Add Usage"; // Or "Plan Upgrade" if you compare pkg IDs
+             packageName = "-";
+         }
+         
+         // 4. Determine Usage (Points)
+         // We can read this from the PointTransaction linked to this payment
+         Long usage = pointTransactionRepository
+                 .findByReferenceTypeAndReferenceId("PURCHASE", payment.getPaymentId())
+                 .stream().findFirst()
+                 .map(PointTransaction::getPoints)
+                 .orElse(0L);
+                 
+         // 5. Billing Cycle (Based on package number of days)
+         String billingCycle = "One-Time";
+         if (pkg != null && pkg.getNumberOfDays() != null) {
+             if (pkg.getNumberOfDays() >= 28 && pkg.getNumberOfDays() <= 31) billingCycle = "Monthly";
+             else if (pkg.getNumberOfDays() >= 360) billingCycle = "Yearly";
+         }
+         
+         // 6. Map Status
+         String status = "Pending";
+         if (payment.getPaymentStatus() == PaymentStatus.SUCCESS) status = "Paid";
+         else if (payment.getPaymentStatus() == PaymentStatus.FAILED) status = "Failed";
+         
+         // 7. Build Invoice ID
+         String invoice = payment.getPaymentStatus() == PaymentStatus.SUCCESS 
+                 ? "INV-" + payment.getPaymentId() 
+                 : "";
+                 
+         BillingHistoryResponse row = BillingHistoryResponse.builder()
+                 .date(payment.getPaymentDate() != null ? payment.getPaymentDate() : payment.getCreatedOn())
+                 .transaction(transactionType)
+                 .packageName(packageName)
+                 .usage(usage)
+                 .billingCycle(billingCycle)
+                 .amount(payment.getAmount())
+                 .status(status)
+                 .invoice(invoice)
+                 .build();
+                 
+         history.add(row);
+     }
+     
+     // Reverse back to return newest first
+     java.util.Collections.reverse(history);
+     
+     return new SingleResponse<>(history, CustomStatus.SUCCESS);
+ }
+    
 }

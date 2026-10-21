@@ -60,7 +60,7 @@ public class PackageController {
     }
     
     @GetMapping("/v1/all")
-    @PreAuthorize("hasAuthority('SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'FACTORY_ADMIN')")
     public ResponseEntity<SingleResponse<PageResponse<PackageResponse>>> getAllPackages(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
@@ -74,7 +74,7 @@ public class PackageController {
     }
     
     @GetMapping("/v1/search")
-    @PreAuthorize("hasAuthority('SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'FACTORY_ADMIN')")
     public ResponseEntity<SingleResponse<PageResponse<PackageResponse>>> searchPackages(
             @RequestParam String packageName,
             @RequestParam(defaultValue = "0") int page,
@@ -88,7 +88,7 @@ public class PackageController {
     
     // ==================== UPDATE ====================
     @PutMapping("/v1/{id}")
-    @PreAuthorize("hasAuthority('SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'FACTORY_ADMIN')")
     public ResponseEntity<SingleResponse<PackageResponse>> updatePackage(
             @PathVariable Long id,
             @Valid @RequestBody PackageRequest request,
@@ -123,7 +123,7 @@ public class PackageController {
     
  // ==================== COUNT ====================
     @GetMapping("/count")
-    @PreAuthorize("hasAuthority('SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'FACTORY_ADMIN')")
     public ResponseEntity<SingleResponse<Map<String, Object>>> getPackageCount(
             @RequestParam(required = false) String status) {
         
