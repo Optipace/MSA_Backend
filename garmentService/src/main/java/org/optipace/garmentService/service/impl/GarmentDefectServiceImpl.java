@@ -36,7 +36,7 @@ public class GarmentDefectServiceImpl implements GarmentDefectService {
 
         log.info("Submitting garment defects: identifier={} batch={} lot={} admin={}",
                 request.getGarmentIdentifier(), request.getBatchId(),
-//                request.getGarmentLotId(), 
+                request.getGarmentLotId(), 
                 adminId);
 
         // created_by / updated_by are INT8 in the DB, so parse the string adminId
@@ -53,7 +53,7 @@ public class GarmentDefectServiceImpl implements GarmentDefectService {
         GarmentInstance instance = new GarmentInstance();
         instance.setSerialNumber(identifier);              // form input → serial_number
         instance.setBatchId(request.getBatchId());
-//        Sinstance.setGarmentLotId(request.getGarmentLotId());
+        instance.setGarmentLotId(request.getGarmentLotId());
         instance.setCurrentStatus(DEFAULT_STATUS);         // "AVAILABLE"
         instance.setCurrentLocation(request.getCurrentLocation());
         instance.setRemarks(request.getRemarks());

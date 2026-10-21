@@ -28,4 +28,6 @@ public interface GarmentBatchRepository
 
     // Fetch all garments belonging to a specific batch.
     List<GarmentBatch> findByBatchId(Long batchId);
+
+	boolean existsByBatchIdAndGarmentId(Long batchId, String garmentId);
 }
