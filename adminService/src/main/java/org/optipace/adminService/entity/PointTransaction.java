@@ -2,6 +2,7 @@ package org.optipace.adminService.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 import org.optipace.adminService.enums.PointTransactionType;
@@ -47,14 +48,17 @@ public class PointTransaction {
     private Long referenceId;
 
     @Column(name = "description")
-    private String description;
+    private
+    String description;
 
     @Column(name = "created_by")
     private Long createdBy;
 
     @Column(name = "created_on", nullable = false)
     private LocalDateTime createdOn;
+    
 
+    
     @PrePersist
     public void prePersist() {
         createdOn = LocalDateTime.now();

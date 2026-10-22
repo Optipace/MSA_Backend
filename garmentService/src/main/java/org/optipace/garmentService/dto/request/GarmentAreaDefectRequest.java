@@ -14,6 +14,9 @@ import java.math.BigDecimal;
 @NoArgsConstructor
 @AllArgsConstructor
 public class GarmentAreaDefectRequest {
+	
+	@NotNull(message = "Garment batch ID is required")
+	private Long garmentBatchId;
 
     @NotNull(message = "Garment area ID is required")
     private Long garmentAreaId;
@@ -21,13 +24,11 @@ public class GarmentAreaDefectRequest {
     @NotNull(message = "Defect ID is required")
     private Long defectId;
 
-    @NotNull(message = "Severity level ID is required")
     private Long severityLevelId;
 
     @DecimalMin(value = "0.0",  message = "Max deduction marks must be greater than or equal to 0")
     private BigDecimal maxDeductionMarks;
 
-    @NotNull(message = "Mandatory flag is required")
     private Boolean isMandatory;
 
     private BigDecimal aiConfidenceThreshold;

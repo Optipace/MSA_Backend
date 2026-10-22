@@ -50,9 +50,12 @@ public class OrganizationRequest {
     @NotBlank(message = "Provide the email")
     @Email(message = "Please provide a valid email")
     private String email;
-
-    @NotBlank(message = "Provide phone number")
-    @Size(min = 20, message = "Provide a valid phone number")
+    
+    @NotBlank(message = "Phone number is required")
+    @Pattern(
+        regexp = "^\\+?[0-9]{10,15}$",
+        message = "Provide a valid phone number (10-15 digits, optional + prefix)"
+    )
     private String phoneNumber;
 
     private String website;

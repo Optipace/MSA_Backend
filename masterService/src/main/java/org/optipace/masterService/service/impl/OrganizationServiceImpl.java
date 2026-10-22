@@ -15,8 +15,10 @@ import org.optipace.masterService.exception.BadRequestException;
 import org.optipace.masterService.exception.NotFoundException;
 import org.optipace.masterService.repository.CityRepository;
 import org.optipace.masterService.repository.CountryRepository;
+import org.optipace.masterService.repository.EmployeeRepository;
 import org.optipace.masterService.repository.OrganizationRepository;
 import org.optipace.masterService.repository.StateRepository;
+import org.optipace.masterService.service.ActivityLogService;
 import org.optipace.masterService.service.OrganizationService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -36,7 +38,10 @@ public class OrganizationServiceImpl implements OrganizationService {
     private final CountryRepository countryRepository;
     private final StateRepository stateRepository;
     private final ModelMapper modelMapper;
+    private final ActivityLogService activityLogService;
+    private final EmployeeRepository employeeRepository;       // ⭐ Added to fetch Admin Name
 
+    
     @Override
     public SingleResponse<PageResponse<ListOfOrganizationResponse>> getAllOrganization(Pageable pageable) {
         Pageable sortedPageable = pageable.getSort().isSorted() ? pageable :
@@ -103,8 +108,30 @@ public class OrganizationServiceImpl implements OrganizationService {
         organization.setVersionNo(1);
         organization.setRecordStatus('A'); // 'A' for Active record
 
-        organizationRepository.save(organization);
+       // organizationRepository.save(organization);
+        
+        Organization savedOrganization = organizationRepository.save(organization);
 
+     // Inside createOrganization method, right after saving:
+        Long organizationId = savedOrganization.getOrganizationId(); 
+        
+        Long adminIdLong = Long.parseLong(superAdminId);
+        // 1. Fetch the Super Admin's name for the log
+        String adminName = employeeRepository.findById(adminIdLong)
+                .map(emp -> emp.getFirstName() + " " + (emp.getLastName() != null ? emp.getLastName() : ""))
+                .orElse("Super Admin");
+        // 2. Build the activity description
+        // Note: request.getOrganizationName() is usually the correct getter based on your DTO
+        String logMessage = adminName.trim() + " added " + request.getName() + " as a new organization";
+        
+     // 3. Save the log
+        activityLogService.logActivity(
+            "ORGANIZATION_CREATED", 
+            logMessage, 
+            savedOrganization.getOrganizationId(), 
+            adminIdLong
+        );
+        
         return new SingleResponse<>(
                 "Organization successfully created with code: " + organization.getOrganizationCode(),
                 CustomStatus.SUCCESS

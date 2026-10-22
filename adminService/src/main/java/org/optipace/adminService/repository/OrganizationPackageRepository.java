@@ -4,6 +4,7 @@ import org.optipace.adminService.entity.OrganizationPackage;
 import org.optipace.adminService.enums.PaymentStatus;
 import org.optipace.adminService.enums.SubscriptionStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
@@ -53,5 +54,18 @@ public interface OrganizationPackageRepository
         Long organizationId,
         Long factoryId
     );
+    
+ // ⭐ Query to get package distribution
+    @Query(value = """
+        SELECT 
+            p.package_name AS packageName,
+            COUNT(DISTINCT op.organization_id) AS organizationCount
+        FROM packages.organization_package op
+        JOIN packages.package p ON op.package_id = p.package_id
+        WHERE op.subscription_status = 'ACTIVE' 
+        GROUP BY p.package_name
+        ORDER BY organizationCount DESC
+    """, nativeQuery = true)
+    List<Object[]> countOrganizationsByPackage();
     
 }

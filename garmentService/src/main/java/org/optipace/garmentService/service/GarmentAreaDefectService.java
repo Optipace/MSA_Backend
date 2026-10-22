@@ -1,5 +1,7 @@
 package org.optipace.garmentService.service;
 
+import java.util.List;
+
 import org.optipace.garmentService.dto.request.GarmentAreaDefectRequest;
 import org.optipace.garmentService.dto.request.GarmentAreaDefectUpdateRequest;
 import org.optipace.garmentService.dto.response.GarmentAreaDefectResponse;
@@ -18,5 +20,8 @@ public interface GarmentAreaDefectService {
 
     SingleResponse<?> updateGarmentAreaDefect(Long garmentAreaDefectId, GarmentAreaDefectUpdateRequest request, String userId);
 
-    SingleResponse<?> deleteGarmentAreaDefect(Long garmentAreaDefectId, String userId);
+    //SingleResponse<?> deleteGarmentAreaDefect(Long garmentAreaDefectId, String userId);
+    
+    SingleResponse<List<ListOfGarmentAreaDefectResponse>>
+    getGarmentAreaDefectsByGarmentBatchId(Long garmentBatchId);
 }

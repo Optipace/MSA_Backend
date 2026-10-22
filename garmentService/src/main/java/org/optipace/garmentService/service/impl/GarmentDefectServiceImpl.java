@@ -36,7 +36,8 @@ public class GarmentDefectServiceImpl implements GarmentDefectService {
 
         log.info("Submitting garment defects: identifier={} batch={} lot={} admin={}",
                 request.getGarmentIdentifier(), request.getBatchId(),
-                request.getGarmentLotId(), adminId);
+                request.getGarmentLotId(), 
+                adminId);
 
         // created_by / updated_by are INT8 in the DB, so parse the string adminId
         Long adminUserId = parseAdminId(adminId);

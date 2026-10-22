@@ -33,5 +33,10 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
 
 	boolean existsByOrganizationIdAndPaidByAndPaymentStatusAndCreatedOnAfter(Long organizationId, Long paidBy,
 			PaymentStatus status, LocalDateTime after);
+	
+	// ⭐ Added for Billing Report
+    List<Payment> findByOrganizationIdOrderByPaymentDateDesc(Long organizationId);
+    
+    List<Payment> findByOrganizationIdAndPaymentStatus(Long organizationId, String status);
 
 }

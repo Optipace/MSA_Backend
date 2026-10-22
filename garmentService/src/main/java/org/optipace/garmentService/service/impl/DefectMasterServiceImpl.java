@@ -81,29 +81,32 @@ public class DefectMasterServiceImpl implements DefectMasterService {
 				+ (saved.getDefectCode() != null ? " with code: " + saved.getDefectCode() : ""));
 	}
 
-	@Override
-	@Transactional(readOnly = true)
-	public SingleResponse<PageResponse<ListOfDefectMasterResponse>> getAllDefectMasters(Pageable pageable) {
 
-		Pageable sortedPageable = pageable.getSort().isSorted() ? pageable
-				: PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(),
-						Sort.by(Sort.Order.asc("defectName").nullsLast()));
+@Override
+@Transactional(readOnly = true)
+public SingleResponse<List<ListOfDefectMasterResponse>> getAllDefectMasters() {
 
-		Page<DefectMaster> defectMasterPage = defectMasterRepository.findAll(sortedPageable);
+    List<DefectMaster> defectMasters =
+            defectMasterRepository.findAll(
+                    Sort.by(
+                            Sort.Order.asc("defectName").nullsLast()
+                    )
+            );
 
-		List<ListOfDefectMasterResponse> responseList = defectMasterPage.getContent().stream()
-				.map(defect -> new ListOfDefectMasterResponse(defect.getDefectId(), defect.getDefectCategoryId(),
-						defect.getDefectCode(), defect.getDefectName(), defect.getDescription(),
-						defect.getDisplayOrder()))
-				.toList();
+    List<ListOfDefectMasterResponse> responseList =
+            defectMasters.stream()
+                    .map(defect -> new ListOfDefectMasterResponse(
+                            defect.getDefectId(),
+                            defect.getDefectCategoryId(),
+                            defect.getDefectCode(),
+                            defect.getDefectName(),
+                            defect.getDescription(),
+                            defect.getDisplayOrder()
+                    ))
+                    .toList();
 
-		PageResponse<ListOfDefectMasterResponse> pageResponse = PageResponse
-				.of(defectMasterPage.map(defectMaster -> new ListOfDefectMasterResponse(defectMaster.getDefectId(),
-						defectMaster.getDefectCategoryId(), defectMaster.getDefectCode(), defectMaster.getDefectName(),
-						defectMaster.getDescription(), defectMaster.getDisplayOrder())));
-
-		return SingleResponse.success(pageResponse);
-	}
+    return SingleResponse.success(responseList);
+}
 
 	@Override
 	@Transactional(readOnly = true)

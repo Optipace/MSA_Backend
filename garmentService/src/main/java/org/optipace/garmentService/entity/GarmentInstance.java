@@ -42,7 +42,7 @@ public class GarmentInstance {
     private String qrCode;
     
     @Column(name = "batch_id")
-    private String batchId;
+    private Long batchId;
     
     @Column(name = "barcode", length = 100)
     private String barcode;

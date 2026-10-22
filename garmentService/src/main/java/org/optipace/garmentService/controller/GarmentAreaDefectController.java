@@ -1,7 +1,11 @@
 package org.optipace.garmentService.controller;
 
 import jakarta.validation.Valid;
+
 import lombok.RequiredArgsConstructor;
+
+import java.util.List;
+
 import org.optipace.garmentService.dto.request.GarmentAreaDefectRequest;
 import org.optipace.garmentService.dto.request.GarmentAreaDefectUpdateRequest;
 import org.optipace.garmentService.dto.response.GarmentAreaDefectResponse;
@@ -15,8 +19,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+
 @RestController
-@RequestMapping("/garment-area-defect")
+@RequestMapping("/garmentAreaDefect")
 @RequiredArgsConstructor
 public class GarmentAreaDefectController {
 
@@ -36,21 +41,36 @@ public class GarmentAreaDefectController {
     }
 
     @GetMapping("/v1/all")
-    @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'FACTORY_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'FACTORY_ADMIN', 'ASSESSOR')")
     public ResponseEntity<SingleResponse<PageResponse<ListOfGarmentAreaDefectResponse>>> getAllGarmentAreaDefects(@RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "10") int size) {
         Pageable pageable = PageRequest.of(page, size);
         return ResponseEntity.ok(garmentAreaDefectService.getAllGarmentAreaDefects(pageable));
     }
+    
+    @GetMapping("/garmentBatchId/{garmentBatchId}")
+    @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'FACTORY_ADMIN', 'ASSESSOR')")
+    public ResponseEntity<
+            SingleResponse<List<ListOfGarmentAreaDefectResponse>>>
+            getGarmentAreaDefectsByBatchId(
+                    @PathVariable Long garmentBatchId) {
 
-    @PatchMapping("/v1/{garmentAreaDefectId}")
+        return ResponseEntity.ok(
+                garmentAreaDefectService
+                        .getGarmentAreaDefectsByGarmentBatchId(garmentBatchId)
+        );
+    }
+
+    @PatchMapping("/v1/update/{garmentAreaDefectId}")
     @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'FACTORY_ADMIN')")
     public ResponseEntity<SingleResponse<?>> updateGarmentAreaDefect(@PathVariable Long garmentAreaDefectId, @Valid @RequestBody GarmentAreaDefectUpdateRequest request, @RequestHeader("X-User-Id") String userId) {
         return ResponseEntity.ok(garmentAreaDefectService.updateGarmentAreaDefect(garmentAreaDefectId, request, userId));
     }
+    
+   
 
-    @DeleteMapping("/v1/{garmentAreaDefectId}")
-    @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'FACTORY_ADMIN')")
-    public ResponseEntity<SingleResponse<?>> deleteGarmentAreaDefect(@PathVariable Long garmentAreaDefectId, @RequestHeader("X-User-Id") String userId) {
-        return ResponseEntity.ok(garmentAreaDefectService.deleteGarmentAreaDefect(garmentAreaDefectId, userId));
-    }
+//    @DeleteMapping("/v1/delete/{garmentAreaDefectId}")
+//    @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'FACTORY_ADMIN')")
+//    public ResponseEntity<SingleResponse<?>> deleteGarmentAreaDefect(@PathVariable Long garmentAreaDefectId, @RequestHeader("X-User-Id") String userId) {
+//        return ResponseEntity.ok(garmentAreaDefectService.deleteGarmentAreaDefect(garmentAreaDefectId, userId));
+//    }
 }

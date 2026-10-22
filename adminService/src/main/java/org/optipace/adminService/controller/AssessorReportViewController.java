@@ -21,7 +21,7 @@ public class AssessorReportViewController {
     private AssessorReportViewService assessmentService;
 
     @GetMapping("/empdetails/{sessionId}")
-    @PreAuthorize("hasAuthority('ASSESSOR')")
+    @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'FACTORY_ADMIN', 'ASSESSOR')")
     public ResponseEntity<AssessorReportViewResponse> getAssessmentDetails(@PathVariable UUID sessionId) {
     	AssessorReportViewResponse response = assessmentService.getAssessmentDetails(sessionId);
         return ResponseEntity.ok(response);

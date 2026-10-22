@@ -1,26 +1,44 @@
+
 package org.optipace.garmentService.repository;
 
-import org.optipace.garmentService.entity.GarmentAreaDefect;
-import org.springframework.data.jpa.repository.JpaRepository;
-
+import java.util.List;
 import java.util.Optional;
 
+import org.optipace.garmentService.entity.GarmentAreaDefect;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.stereotype.Repository;
+
+@Repository
 public interface GarmentAreaDefectRepository
         extends JpaRepository<GarmentAreaDefect, Long> {
 
-    boolean existsByGarmentAreaIdAndDefectId(
+    boolean existsByGarmentBatchIdAndGarmentAreaIdAndDefectId(
+            Long garmentBatchId,
             Long garmentAreaId,
-            Long defectId
-    );
+            Long defectId);
 
-    Optional<GarmentAreaDefect> findByGarmentAreaIdAndDefectId(
+    Optional<GarmentAreaDefect> findByGarmentBatchIdAndGarmentAreaIdAndDefectId(
+            Long garmentBatchId,
             Long garmentAreaId,
-            Long defectId
-    );
+            Long defectId);
 
-    boolean existsByGarmentAreaIdAndDefectIdAndGarmentAreaDefectIdNot(
+    boolean existsByGarmentBatchIdAndGarmentAreaIdAndDefectIdAndGarmentAreaDefectIdNot(
+            Long garmentBatchId,
             Long garmentAreaId,
             Long defectId,
-            Long garmentAreaDefectId
+            Long garmentAreaDefectId);
+    
+    boolean existsByGarmentBatchId(Long garmentBatchId);
+    
+    Page<GarmentAreaDefect> findByRecordStatusIn(
+            List<Character> recordStatuses,
+            Pageable pageable
     );
+
+	Optional<GarmentAreaDefect> findByGarmentAreaDefectIdAndRecordStatus(Long garmentAreaDefectId, char c);
+	
+	List<GarmentAreaDefect> findByGarmentBatchId(Long garmentBatchId);
 }

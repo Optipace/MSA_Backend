@@ -23,7 +23,7 @@ public class OrganizationController {
     private final OrganizationService organizationService;
 
     @GetMapping("/v1/all")
-    @PreAuthorize("hasAuthority('SUPER_ADMIN')")
+    //@PreAuthorize("hasAuthority('SUPER_ADMIN')")
     public ResponseEntity<SingleResponse<PageResponse<ListOfOrganizationResponse>>> getAllOrganization(@RequestParam(defaultValue = "0")int page, @RequestParam(defaultValue = "10")int size){
         Pageable pageable = PageRequest.of(page, size);
         return ResponseEntity.ok(organizationService.getAllOrganization(pageable));
@@ -42,7 +42,7 @@ public class OrganizationController {
     }
 
     @GetMapping("/v1/{organizationId}")
-    @PreAuthorize("hasAuthority('SUPER_ADMIN')")
+    //@PreAuthorize("hasAuthority('SUPER_ADMIN')")
     public ResponseEntity<SingleResponse<OrganizationResponse>> getOrganizationById(@PathVariable Long organizationId){
         return ResponseEntity.ok(organizationService.getOrganizationById(organizationId));
     }

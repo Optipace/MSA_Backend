@@ -1,5 +1,7 @@
 package org.optipace.garmentService.service;
 
+import java.util.List;
+
 import org.optipace.garmentService.dto.request.AddDefectCategoryRequest;
 import org.optipace.garmentService.dto.request.UpdateDefectCategoryRequest;
 import org.optipace.garmentService.dto.response.DefectCategoryResponse;
@@ -12,8 +14,8 @@ public interface DefectCategoryService {
 
     SingleResponse<?> createDefectCategory(AddDefectCategoryRequest request, String adminId);
 
-    SingleResponse<PageResponse<ListOfDefectCategoryResponse>>
-            getAllDefectCategories(Pageable pageable);
+    SingleResponse<List<ListOfDefectCategoryResponse>>
+                                                 getAllDefectCategories();
 
     SingleResponse<DefectCategoryResponse> getDefectCategoryById(Long defectCategoryId);
 

@@ -1,5 +1,9 @@
 package org.optipace.adminService.service;
 
+import org.optipace.adminService.dto.response.BillingHistoryResponse;
+
+import java.util.List;
+
 import org.optipace.adminService.dto.request.PaymentCallbackRequestDto;
 import org.optipace.adminService.dto.request.PurchaseRequestDto;
 import org.optipace.adminService.dto.response.PaymentResponse;
@@ -23,4 +27,7 @@ public interface PurchaseService {
     
     /** Payment gateway callback — success or failure */
     SingleResponse<PurchaseResponse> handleCallback(PaymentCallbackRequestDto callback);
+    
+ // ⭐ New method
+    SingleResponse<List<BillingHistoryResponse>> getBillingHistory(Long organizationId);
 }

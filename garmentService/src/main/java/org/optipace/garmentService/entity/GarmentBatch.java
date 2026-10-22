@@ -1,4 +1,3 @@
-
 package org.optipace.garmentService.entity;
 
 import jakarta.persistence.Column;
@@ -18,8 +17,8 @@ import lombok.NoArgsConstructor;
     schema = "garment",
     uniqueConstraints = {
         @UniqueConstraint(
-            name = "uq_garment_batch_code",
-            columnNames = {"batch_id", "garment_code"}
+            name = "uq_garment_batch_id_per_batch",
+            columnNames = {"batch_id", "garment_id"}
         )
     }
 )
@@ -42,6 +41,6 @@ public class GarmentBatch {
     @Column(name = "garment_id", nullable = false, length = 100)
     private String garmentId;
 
-    @Column(name = "garment_code", nullable = false, length = 100)
-    private String garmentCode;
+    @Column(name = "garment_name", nullable = false, length = 100)
+    private String garmentName;
 }
