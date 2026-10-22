@@ -1,5 +1,7 @@
 package org.optipace.garmentService.service;
 
+import java.util.List;
+
 import org.optipace.garmentService.dto.request.AddGarmentAreaRequest;
 import org.optipace.garmentService.dto.request.UpdateGarmentAreaRequest;
 import org.optipace.garmentService.dto.response.GarmentAreaResponse;
@@ -15,9 +17,8 @@ public interface GarmentAreaService {
             String adminId
     );
 
-    SingleResponse<PageResponse<ListOfGarmentAreaResponse>>
-            getAllGarmentAreas(Pageable pageable);
-
+    SingleResponse<List<ListOfGarmentAreaResponse>> getAllGarmentAreas();
+    
     SingleResponse<GarmentAreaResponse>
             getGarmentAreaById(Long garmentAreaId);
 

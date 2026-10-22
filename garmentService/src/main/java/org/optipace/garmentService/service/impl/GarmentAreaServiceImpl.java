@@ -138,28 +138,17 @@ public class GarmentAreaServiceImpl implements GarmentAreaService {
 
     @Override
     @Transactional(readOnly = true)
-    public SingleResponse<PageResponse<ListOfGarmentAreaResponse>>
-            getAllGarmentAreas(Pageable pageable) {
+    public SingleResponse<List<ListOfGarmentAreaResponse>> getAllGarmentAreas() {
 
-        Pageable sortedPageable = pageable.getSort().isSorted()
-                ? pageable
-                : PageRequest.of(
-                        pageable.getPageNumber(),
-                        pageable.getPageSize(),
+        List<GarmentArea> garmentAreas =
+                garmentAreaRepository.findAll(
                         Sort.by(
-                                Sort.Order.asc("areaName")
-                                        .nullsLast()
+                                Sort.Order.asc("areaName").nullsLast()
                         )
                 );
 
-        Page<GarmentArea> garmentAreaPage =
-                garmentAreaRepository.findAll(
-                        sortedPageable
-                );
-
         List<ListOfGarmentAreaResponse> responseList =
-                garmentAreaPage.getContent()
-                        .stream()
+                garmentAreas.stream()
                         .map(garmentArea ->
                                 new ListOfGarmentAreaResponse(
                                         garmentArea.getGarmentAreaId(),
@@ -167,28 +156,15 @@ public class GarmentAreaServiceImpl implements GarmentAreaService {
                                         garmentArea.getAreaCode(),
                                         garmentArea.getAreaName(),
                                         garmentArea.getDisplayOrder()
-//                                        garmentArea.getXCoordinate(),
-//                                        garmentArea.getYCoordinate(),
-//                                        garmentArea.getWidth(),
-//                                        garmentArea.getHeight()
+                                        // garmentArea.getXCoordinate(),
+                                        // garmentArea.getYCoordinate(),
+                                        // garmentArea.getWidth(),
+                                        // garmentArea.getHeight()
                                 )
                         )
                         .toList();
 
-        PageResponse<ListOfGarmentAreaResponse> pageResponse =
-                new PageResponse<>(
-                        responseList,
-                        garmentAreaPage.getNumber(),
-                        garmentAreaPage.getSize(),
-                        garmentAreaPage.getTotalElements(),
-                        garmentAreaPage.getTotalPages(),
-                        garmentAreaPage.isLast(),
-                        garmentAreaPage.isFirst(),
-                        garmentAreaPage.getNumberOfElements(),
-                        garmentAreaPage.isEmpty()
-                );
-
-        return SingleResponse.success(pageResponse);
+        return SingleResponse.success(responseList);
     }
 
     @Override

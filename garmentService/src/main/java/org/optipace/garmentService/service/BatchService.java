@@ -1,5 +1,7 @@
 package org.optipace.garmentService.service;
 
+import java.util.List;
+
 import org.optipace.garmentService.dto.request.AddBatchRequest;
 import org.optipace.garmentService.dto.request.UpdateBatchRequest;
 import org.optipace.garmentService.dto.response.BatchResponse;
@@ -12,7 +14,9 @@ public interface BatchService {
 
     SingleResponse<?> createBatch(AddBatchRequest request, String adminId);
 
-    SingleResponse<PageResponse<ListOfBatchResponse>> getAllBatches(Pageable pageable);
+    SingleResponse<List<ListOfBatchResponse>> getAllBatches();
+
+    //SingleResponse<PageResponse<ListOfBatchResponse>> getAllBatches(Pageable pageable);
 
     SingleResponse<BatchResponse> getBatchById(Long batchId);
 

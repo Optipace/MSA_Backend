@@ -27,7 +27,7 @@ public class AssessorReportController {
      * Returns employee assessment reports.
      */
     @GetMapping
-    @PreAuthorize("hasAuthority('ASSESSOR')")
+    @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'FACTORY_ADMIN', 'ASSESSOR')")
     public ResponseEntity<SingleResponse<List<Map<String, Object>>>>
             getAssessorReport() {
 
