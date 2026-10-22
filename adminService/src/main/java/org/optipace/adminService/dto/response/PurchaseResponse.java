@@ -21,6 +21,11 @@ public class PurchaseResponse {
     private PaymentMethod paymentMethod;
     private PaymentStatus paymentStatus;
     private String gatewayOrderId;
+    private String gatewayPaymentId;         // ✅ (optional)
+    
+ // ⭐ Razorpay (for frontend checkout)
+    private String razorpayKeyId;                    // publishable key
+    private String razorpayOrderId;                  // same as gatewayOrderId — convenience
     
     // OrganizationPackage
     private Long organizationPackageId;

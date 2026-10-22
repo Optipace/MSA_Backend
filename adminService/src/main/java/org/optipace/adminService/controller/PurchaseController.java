@@ -26,7 +26,8 @@ public class PurchaseController {
      * FACTORY_ADMIN buys a package
      */
     @PostMapping("/buy")
-    @PreAuthorize("hasAuthority('SUPER_ADMIN')")
+   //@PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'FACTORY_ADMIN')")
+    @PreAuthorize("hasAuthority('FACTORY_ADMIN')")
     public ResponseEntity<SingleResponse<PurchaseResponse>> buyPackage(
             @Valid @RequestBody PurchaseRequestDto request,
             @RequestHeader("X-User-Id") String userId) {
@@ -48,7 +49,8 @@ public class PurchaseController {
      * Payment gateway callback (usually public)
      */
     @PostMapping("/callback")
-    @PreAuthorize("hasAuthority('SUPER_ADMIN')")
+   //@PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'FACTORY_ADMIN')")
+    @PreAuthorize("hasAuthority('FACTORY_ADMIN')")
     public ResponseEntity<SingleResponse<PurchaseResponse>> handleCallback(
             @RequestBody PaymentCallbackRequestDto callback) {
         

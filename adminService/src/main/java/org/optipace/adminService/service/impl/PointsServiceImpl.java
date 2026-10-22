@@ -3,12 +3,17 @@ package org.optipace.adminService.service.impl;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.optipace.adminService.dto.response.SingleResponse;
+import org.optipace.adminService.entity.AssessmentUsage;
+import org.optipace.adminService.entity.Organization;
+import org.optipace.adminService.entity.OrganizationPackage;
 import org.optipace.adminService.entity.OrganizationPoints;
 import org.optipace.adminService.entity.PointTransaction;
 import org.optipace.adminService.enums.CustomStatus;
 import org.optipace.adminService.enums.PointTransactionType;
 import org.optipace.adminService.exception.BadRequestException;
+import org.optipace.adminService.repository.OrganizationPackageRepository;
 import org.optipace.adminService.repository.OrganizationPointsRepository;
+import org.optipace.adminService.repository.OrganizationRepository;
 import org.optipace.adminService.repository.PointTransactionRepository;
 import org.optipace.adminService.service.PointsService;
 import org.springframework.stereotype.Service;
@@ -18,6 +23,7 @@ import java.time.LocalDate;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -26,6 +32,8 @@ public class PointsServiceImpl implements PointsService {
     
     private final OrganizationPointsRepository organizationPointsRepository;
     private final PointTransactionRepository pointTransactionRepository;
+    private final OrganizationRepository organizationRepository;
+    private final OrganizationPackageRepository organizationPackageRepository;
     
     // =====================================================
     // ⭐ AVAILABLE POINTS (excludes expired)
@@ -34,6 +42,20 @@ public class PointsServiceImpl implements PointsService {
     public SingleResponse<Map<String, Object>> getAvailablePoints(Long organizationId) {
         
         LocalDate today = LocalDate.now();
+        
+        // ⭐ 1. Fetch Organization Name
+        String organizationName = organizationRepository.findById(organizationId)
+                .map(Organization::getOrganizationName)
+                .orElse("Unknown Organization");
+        
+        // 2. Fetch Package Names (Map of organizationPackageId -> packageName)
+        List<OrganizationPackage> orgPackages = organizationPackageRepository.findByOrganizationId(organizationId);
+        Map<Long, String> packageNamesMap = orgPackages.stream()
+                .collect(Collectors.toMap(
+                        OrganizationPackage::getOrganizationPackageId,
+                        op -> op.getPackageEntity() != null ? op.getPackageEntity().getPackageName() : "Unknown Package",
+                        (existing, replacement) -> existing // handle duplicates just in case
+                ));
         
         // FIFO available credits
         List<OrganizationPoints> available = organizationPointsRepository
@@ -67,6 +89,7 @@ public class PointsServiceImpl implements PointsService {
         
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("organizationId", organizationId);
+        result.put("organizationName", organizationName); // ⭐ ADDED HERE
         result.put("totalAvailable", totalAvailable);
         result.put("expiringIn30Days", expiringIn30Days);
         result.put("expiredUnused", expiredUnused);
@@ -74,6 +97,7 @@ public class PointsServiceImpl implements PointsService {
             Map<String, Object> item = new LinkedHashMap<>();
             item.put("pointsId", op.getPointsId());
             item.put("organizationPackageId", op.getOrganizationPackageId());
+            item.put("packageName", packageNamesMap.getOrDefault(op.getOrganizationPackageId(), "Unknown Package"));
             item.put("totalPoints", op.getTotalPoints());
             item.put("usedPoints", op.getUsedPoints());
             item.put("availablePoints", op.getAvailablePoints());
