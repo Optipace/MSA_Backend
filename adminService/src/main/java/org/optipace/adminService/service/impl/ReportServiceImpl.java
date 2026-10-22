@@ -3,21 +3,30 @@ package org.optipace.adminService.service.impl;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+import org.optipace.adminService.dto.response.AdminListResponse;
 import org.optipace.adminService.dto.response.OrgAdminCountResponse;
 import org.optipace.adminService.dto.response.OrganizationOverviewReportResponse;
 import org.optipace.adminService.dto.response.OrganizationOverviewResponse;
 import org.optipace.adminService.dto.response.OrganizationPlanReportResponse;
 import org.optipace.adminService.dto.response.PackageChartDataResponse;
 import org.optipace.adminService.dto.request.SuperAdminAssessmentReportDto;
+import org.optipace.adminService.dto.request.UpdateAdminStatusRequest;
 import org.optipace.adminService.dto.response.SingleResponse;
+import org.optipace.adminService.entity.Employee;
 import org.optipace.adminService.enums.CustomStatus;
+import org.optipace.adminService.exception.ResourceNotFoundException;
 import org.optipace.adminService.repository.AssessmentUsageRepository;
+import org.optipace.adminService.repository.EmployeeRepository;
 import org.optipace.adminService.repository.OrganizationPackageRepository;
 import org.optipace.adminService.repository.OrganizationRepository;
+import org.optipace.adminService.repository.SubscriptionPackageRepository;
 import org.optipace.adminService.service.ReportService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+
+import jakarta.transaction.Transactional;
+import jakarta.ws.rs.BadRequestException;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -33,6 +42,8 @@ public class ReportServiceImpl implements ReportService {
 
 	private final OrganizationRepository organizationRepository;
 	private final OrganizationPackageRepository organizationPackageRepository;
+	private final EmployeeRepository employeeRepository;
+	private final SubscriptionPackageRepository subscriptionPackageRepository;
 
 	@Override
 	public SingleResponse<?> getAssessmentReport(Long organizationId, Pageable pageable) {
@@ -117,6 +128,69 @@ public class ReportServiceImpl implements ReportService {
 				.totalOrganizations((long) rows.size()).organizations(rows).build();
 
 		return new SingleResponse<>(response, CustomStatus.SUCCESS);
+	}
+
+	@Override
+	public SingleResponse<Long> getTotalAdminCount(Long userAdminId) {
+		log.info("Fetching Total Admin Count for Super Admin: {}", userAdminId);
+
+		// Fetch count from DB
+		Long totalCount = employeeRepository.countTotalAdmins(userAdminId);
+
+		// Default to 0 if null
+		if (totalCount == null) {
+			totalCount = 0L;
+		}
+
+		// Return the Long directly inside the response
+		return new SingleResponse<>(totalCount, CustomStatus.SUCCESS);
+	}
+
+	@Override
+	public SingleResponse<Long> getTotalPackageCount() {
+		log.info("Fetching Total Package Count");
+
+		// Uses the built-in count() method from JpaRepository
+		long totalPackages = subscriptionPackageRepository.count();
+
+		return new SingleResponse<>(totalPackages, CustomStatus.SUCCESS);
+	}
+
+	@Override
+	public SingleResponse<List<AdminListResponse>> getAllAdminsBySuperAdmin(Long superAdminId) {
+		log.info("Fetching all admins created by Super Admin: {}", superAdminId);
+
+		List<AdminListResponse> adminList = employeeRepository.findAllAdminsBySuperAdmin(superAdminId);
+
+		return new SingleResponse<>(adminList, CustomStatus.SUCCESS);
+	}
+
+	@Override
+	@Transactional
+	public SingleResponse<?> updateAdminStatus(Long employeeId, UpdateAdminStatusRequest request, String adminId) {
+		log.info("Super Admin {} is changing status for Admin ID {} to {}", adminId, employeeId, request.getStatus());
+
+		// 1. Find the employee
+		Employee employee = employeeRepository.findById(employeeId)
+				.orElseThrow(() -> new ResourceNotFoundException("Employee", "employeeId", employeeId));
+
+		// 2. Prevent deactivating the main Super Admin
+		if (employeeId.equals(1L)) {
+			throw new BadRequestException("You cannot change the status of the primary Super Admin.");
+		}
+
+		// 3. Update the status in master.employee
+		char newStatus = request.getStatus().charAt(0);
+		employee.setRecordStatus(newStatus);
+	    employee.setUpdatedBy(Long.parseLong(adminId)); 
+
+		employeeRepository.saveAndFlush(employee);
+
+		// 4. Lock or Unlock the login in security schema
+		boolean shouldLockAccount = (newStatus == 'I' || newStatus == 'D');
+		employeeRepository.updateLoginLockStatus(employeeId, shouldLockAccount);
+
+		return new SingleResponse<>("Admin status updated successfully", CustomStatus.SUCCESS);
 	}
 
 }

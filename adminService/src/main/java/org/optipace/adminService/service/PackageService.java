@@ -27,5 +27,8 @@ public interface PackageService {
 
  // ⭐ NEW — returns Map with counts
     SingleResponse<Map<String, Object>> getPackageCount(String status);
+    
+   // long countByRecordStatus(String recordStatus);
+
 
 }

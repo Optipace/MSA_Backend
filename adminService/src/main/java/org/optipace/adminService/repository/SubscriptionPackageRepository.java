@@ -14,5 +14,7 @@ public interface SubscriptionPackageRepository extends JpaRepository<Subscriptio
 	//Optional<Payment> findById(Long organizationPackageId);
 	
     List<SubscriptionPackage> findByRecordStatus(Character recordStatus);
+    long countByRecordStatus(String recordStatus); 
+
 
 }
