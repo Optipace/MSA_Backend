@@ -1,20 +1,19 @@
 package org.optipace.adminService.controller;
 
 import lombok.RequiredArgsConstructor;
+import org.hibernate.query.Page;
 import org.optipace.adminService.dto.response.*;
 import org.optipace.adminService.service.impl.DashboardService;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/admin/dashboard")
 @RequiredArgsConstructor
-public class DashboardController {
+public class FactoryAdminDashboardController {
 
     private final DashboardService dashboardService;
 
@@ -58,4 +57,23 @@ public class DashboardController {
         return ResponseEntity.ok(dashboardService.getColourTestDistribution());
     }
 
+    @GetMapping("/employeeReport")
+    public ResponseEntity<SingleResponse<EmployeeReportResponse>> getEmployeeReport(@RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "5") int size, @RequestParam(required = false) String search) {
+        return ResponseEntity.ok(dashboardService.getEmployeeReport(page, size, search));
+    }
+
+    @GetMapping("/employeeReport/{employeeId}")
+    public ResponseEntity<SingleResponse<EmployeeDetailsResponse>> getEmployeeReportDetails(@PathVariable String employeeId) {
+        return ResponseEntity.ok(dashboardService.getEmployeeDetails(employeeId));
+    }
+
+    @GetMapping("/assessmentReport")
+    public ResponseEntity<SingleResponse<List<AssessmentReportResponse>>> getAssessmentReportList(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "5") int size, @RequestParam(required = false) String search) {
+        return ResponseEntity.ok(dashboardService.getAssessmentReportList(page, size, search));
+    }
+
+    @GetMapping("/assessmentReport/{assessmentId}")
+    public ResponseEntity<SingleResponse<AssessmentDashboardResponse>> getAssessmentReport(@PathVariable Long assessmentId, @RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "5") int size, @RequestParam(required = false) String search) {
+        return ResponseEntity.ok(dashboardService.getAssessmentReport(assessmentId, page, size, search));
+    }
 }
