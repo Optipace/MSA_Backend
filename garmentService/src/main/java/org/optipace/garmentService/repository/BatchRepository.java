@@ -1,5 +1,6 @@
 package org.optipace.garmentService.repository;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.optipace.garmentService.entity.Batch;
@@ -10,8 +11,10 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface BatchRepository extends JpaRepository<Batch, Long> {
+	
+    List<Batch> findByRecordStatus(Character recordStatus);
 
-    Page<Batch> findByRecordStatus(Character recordStatus, Pageable pageable);
+    //Page<Batch> findByRecordStatus(Character recordStatus, Pageable pageable);
 
     Optional<Batch> findByBatchIdAndRecordStatus(Long batchId, Character recordStatus);
 

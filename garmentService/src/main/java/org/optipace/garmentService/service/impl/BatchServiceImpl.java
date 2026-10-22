@@ -1,5 +1,8 @@
 package org.optipace.garmentService.service.impl;
 
+import java.util.Comparator;
+import java.util.List;
+
 import org.optipace.garmentService.dto.request.AddBatchRequest;
 import org.optipace.garmentService.dto.request.UpdateBatchRequest;
 import org.optipace.garmentService.dto.response.BatchResponse;
@@ -80,25 +83,28 @@ public class BatchServiceImpl implements BatchService {
 
     // ---------- GET ALL ----------
 
-    @Override
-    @Transactional(readOnly = true)
-    public SingleResponse<PageResponse<ListOfBatchResponse>> getAllBatches(Pageable pageable) {
 
-        Pageable sortedPageable = pageable.getSort().isSorted()
-                ? pageable
-                : PageRequest.of(
-                        pageable.getPageNumber(),
-                        pageable.getPageSize(),
-                        Sort.by(Sort.Order.asc("displayOrder").nullsLast(),
-                                Sort.Order.asc("batchName").nullsLast()));
+@Override
+@Transactional(readOnly = true)
+public SingleResponse<List<ListOfBatchResponse>> getAllBatches() {
 
-        Page<Batch> batchPage = batchRepository.findByRecordStatus(STATUS_ACTIVE, sortedPageable);
+    List<Batch> batches = batchRepository.findByRecordStatus(STATUS_ACTIVE);
 
-        PageResponse<ListOfBatchResponse> pageResponse =
-                PageResponse.of(batchPage.map(this::mapToListResponse));
+    List<ListOfBatchResponse> batchResponses = batches.stream()
+            .sorted(
+                    Comparator.comparing(
+                            Batch::getDisplayOrder,
+                            Comparator.nullsLast(Comparator.naturalOrder()))
+                    .thenComparing(
+                            Batch::getBatchName,
+                            Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER))
+            )
+            .map(this::mapToListResponse)
+            .toList();
 
-        return SingleResponse.success(pageResponse);
-    }
+    return SingleResponse.success(batchResponses);
+}
+
 
     // ---------- GET BY ID ----------
 

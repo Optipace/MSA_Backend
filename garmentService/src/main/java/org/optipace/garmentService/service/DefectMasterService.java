@@ -1,5 +1,7 @@
 package org.optipace.garmentService.service;
 
+import java.util.List;
+
 import org.optipace.garmentService.dto.request.AddDefectMasterRequest;
 import org.optipace.garmentService.dto.request.UpdateDefectMasterRequest;
 import org.optipace.garmentService.dto.response.DefectMasterResponse;
@@ -16,8 +18,7 @@ public interface DefectMasterService {
             String adminId
     );
 
-    SingleResponse<PageResponse<ListOfDefectMasterResponse>>
-            getAllDefectMasters(Pageable pageable);
+    SingleResponse<List<ListOfDefectMasterResponse>> getAllDefectMasters();
 
     SingleResponse<DefectMasterResponse>
             getDefectMasterById(Long defectId);

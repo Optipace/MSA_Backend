@@ -3,6 +3,8 @@ package org.optipace.garmentService.controller;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
+import java.util.List;
+
 import org.optipace.garmentService.dto.request.AddGarmentAreaRequest;
 import org.optipace.garmentService.dto.request.UpdateGarmentAreaRequest;
 import org.optipace.garmentService.dto.response.GarmentAreaResponse;
@@ -39,20 +41,11 @@ public class GarmentAreaController {
     }
 
     @GetMapping("/v1/all")
-    @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'FACTORY_ADMIN')")
-    public ResponseEntity<
-            SingleResponse<PageResponse<ListOfGarmentAreaResponse>>>
-            getAllGarmentAreas(
-                    @RequestParam(defaultValue = "0") int page,
-                    @RequestParam(defaultValue = "10") int size) {
-
-        Pageable pageable =
-                PageRequest.of(page, size);
+    @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'FACTORY_ADMIN', 'ASSESSOR')")
+    public ResponseEntity<SingleResponse<List<ListOfGarmentAreaResponse>>> getAllGarmentAreas() {
 
         return ResponseEntity.ok(
-                garmentAreaService.getAllGarmentAreas(
-                        pageable
-                )
+                garmentAreaService.getAllGarmentAreas()
         );
     }
 

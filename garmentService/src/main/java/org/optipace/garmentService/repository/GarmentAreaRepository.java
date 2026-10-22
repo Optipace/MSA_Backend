@@ -1,5 +1,6 @@
 package org.optipace.garmentService.repository;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.optipace.garmentService.entity.GarmentArea;
@@ -12,8 +13,8 @@ import org.springframework.stereotype.Repository;
 public interface GarmentAreaRepository
         extends JpaRepository<GarmentArea, Long> {
 
-    Page<GarmentArea> findAll(Pageable pageable);
-
+	List<GarmentArea> findAll();
+	
     Optional<GarmentArea> findByGarmentAreaId(
             Long garmentAreaId
     );

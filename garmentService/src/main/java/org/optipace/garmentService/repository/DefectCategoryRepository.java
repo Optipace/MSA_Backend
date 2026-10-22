@@ -1,5 +1,6 @@
 package org.optipace.garmentService.repository;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.optipace.garmentService.entity.DefectCategory;
@@ -12,8 +13,8 @@ import org.springframework.stereotype.Repository;
 public interface DefectCategoryRepository
         extends JpaRepository<DefectCategory, Long> {
 
-    Page<DefectCategory> findAll(Pageable pageable);
-
+	List<DefectCategory> findAll();
+	
     Optional<DefectCategory> findByDefectCategoryId(Long defectCategoryId);
 
     boolean existsByCategoryCode(String categoryCode);

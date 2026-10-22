@@ -29,7 +29,7 @@ public class AssessorDashboardController {
      * - Employee Assessment Details
      */
     @GetMapping
-    @PreAuthorize("hasAuthority('ASSESSOR')")
+    @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'FACTORY_ADMIN', 'ASSESSOR')")
     public ResponseEntity<SingleResponse<Map<String, Object>>> getDashboard() {
 
         log.info("REST request to get assessor dashboard");

@@ -3,6 +3,8 @@ package org.optipace.garmentService.controller;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
+import java.util.List;
+
 import org.optipace.garmentService.dto.request.AddDefectCategoryRequest;
 import org.optipace.garmentService.dto.request.UpdateDefectCategoryRequest;
 import org.optipace.garmentService.dto.response.DefectCategoryResponse;
@@ -41,18 +43,11 @@ public class DefectCategoryController {
     @GetMapping("/v1/all")
     @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'FACTORY_ADMIN')")
     public ResponseEntity<
-            SingleResponse<PageResponse<ListOfDefectCategoryResponse>>>
-            getAllDefectCategories(
-                    @RequestParam(defaultValue = "0") int page,
-                    @RequestParam(defaultValue = "10") int size) {
-
-        Pageable pageable =
-                PageRequest.of(page, size);
+            SingleResponse<List<ListOfDefectCategoryResponse>>>
+            getAllDefectCategories() {
 
         return ResponseEntity.ok(
-                defectCategoryService.getAllDefectCategories(
-                        pageable
-                )
+                defectCategoryService.getAllDefectCategories()
         );
     }
 
