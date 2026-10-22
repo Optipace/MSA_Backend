@@ -3,6 +3,8 @@ package org.optipace.garmentService.controller;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
+import java.util.List;
+
 import org.optipace.garmentService.dto.request.AddBatchRequest;
 import org.optipace.garmentService.dto.request.UpdateBatchRequest;
 import org.optipace.garmentService.dto.response.BatchResponse;
@@ -38,15 +40,10 @@ public class BatchController {
     @GetMapping("/v1/all")
     @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'FACTORY_ADMIN', 'ASSESSOR')")
     public ResponseEntity<
-            SingleResponse<PageResponse<ListOfBatchResponse>>>
-            getAllBatches(
-                    @RequestParam(defaultValue = "0") int page,
-                    @RequestParam(defaultValue = "10") int size) {
-
-        Pageable pageable = PageRequest.of(page, size);
+            SingleResponse<List<ListOfBatchResponse>>> getAllBatches() {
 
         return ResponseEntity.ok(
-                batchService.getAllBatches(pageable)
+                batchService.getAllBatches()
         );
     }
 

@@ -77,31 +77,34 @@ public class DefectCategoryServiceImpl implements DefectCategoryService {
 
     // ---------- GET ALL ----------
 
-    @Override
-    @Transactional(readOnly = true)
-    public SingleResponse<PageResponse<ListOfDefectCategoryResponse>> getAllDefectCategories(Pageable pageable) {
 
-        Pageable sortedPageable = pageable.getSort().isSorted()
-                ? pageable
-                : PageRequest.of(
-                        pageable.getPageNumber(),
-                        pageable.getPageSize(),
-                        Sort.by(Sort.Order.asc("categoryName").nullsLast()));
+@Override
+@Transactional(readOnly = true)
+public SingleResponse<List<ListOfDefectCategoryResponse>> getAllDefectCategories() {
 
-        Page<DefectCategory> defectCategoryPage =
-                defectCategoryRepository.findAll(sortedPageable);
+    List<DefectCategory> defectCategories =
+            defectCategoryRepository.findAll(
+                    Sort.by(
+                            Sort.Order.asc("categoryName").nullsLast()
+                    )
+            );
 
-        PageResponse<ListOfDefectCategoryResponse> pageResponse =
-                PageResponse.of(defectCategoryPage.map(defectCategory ->
-                        new ListOfDefectCategoryResponse(
-                                defectCategory.getDefectCategoryId(),
-                                defectCategory.getCategoryCode(),
-                                defectCategory.getCategoryName(),
-                                defectCategory.getDescription(),
-                                defectCategory.getDisplayOrder())));
+    List<ListOfDefectCategoryResponse> responseList =
+            defectCategories.stream()
+                    .map(defectCategory ->
+                            new ListOfDefectCategoryResponse(
+                                    defectCategory.getDefectCategoryId(),
+                                    defectCategory.getCategoryCode(),
+                                    defectCategory.getCategoryName(),
+                                    defectCategory.getDescription(),
+                                    defectCategory.getDisplayOrder()
+                            )
+                    )
+                    .toList();
 
-        return SingleResponse.success(pageResponse);
-    }
+    return SingleResponse.success(responseList);
+}
+
 
     // ---------- GET BY ID ----------
 
