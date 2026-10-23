@@ -23,105 +23,106 @@ public class AssessmentReportRepository {
             String search) {
 
         String sql = """
-            WITH latest_module_instance AS (
-                SELECT
-                    s.assessment_session_id,
-                    am.assessment_module_id,
-                    ami.assessment_module_instance_id,
-                    ami.percentage,
-                    mst.status_code,
-                    ROW_NUMBER() OVER (
-                        PARTITION BY
-                            s.assessment_session_id,
-                            am.assessment_module_id
-                        ORDER BY
-                            ami.created_on DESC,
-                            ami.sequence_no DESC
-                    ) AS rn
-                FROM assessment.assessment_session s
-                JOIN assessment.assessment_attempt aa
-                    ON aa.assessment_session_id =
-                       s.assessment_session_id
-                JOIN assessment.assessment_module_instance ami
-                    ON ami.assessment_attempt_id =
-                       aa.assessment_attempt_id
-                JOIN config.assessment_module am
-                    ON am.assessment_module_id =
-                       ami.assessment_module_id
-                JOIN assessment.module_status mst
-                    ON mst.module_status_id =
-                       ami.module_status_id
-                WHERE ami.is_deleted = FALSE
-                  AND TRIM(s.record_status) = 'A'
-            )
+        WITH latest_module_instance AS (
             SELECT
-                am.module_name AS assessment_name,
-
-                COUNT(lmi.assessment_session_id) AS assigned,
-
-                COUNT(lmi.assessment_session_id)
-                    FILTER (
-                        WHERE lmi.status_code = 'COMPLETED'
-                    ) AS completed,
-
-                0 AS passed,
-                0 AS failed,
-
-                AVG(lmi.percentage)
-                    FILTER (
-                        WHERE lmi.status_code = 'COMPLETED'
-                    ) AS avg_score,
-
-                CASE
-                    WHEN COUNT(lmi.assessment_session_id) = 0
-                        THEN 'NOT_ASSIGNED'
-
-                    WHEN COUNT(lmi.assessment_session_id)
-                        FILTER (
-                            WHERE lmi.status_code = 'COMPLETED'
-                        ) = COUNT(lmi.assessment_session_id)
-                        THEN 'COMPLETED'
-
-                    WHEN COUNT(lmi.assessment_session_id)
-                        FILTER (
-                            WHERE lmi.status_code = 'IN_PROGRESS'
-                        ) > 0
-                        THEN 'IN_PROGRESS'
-
-                    WHEN COUNT(lmi.assessment_session_id)
-                        FILTER (
-                            WHERE lmi.status_code = 'AVAILABLE'
-                        ) > 0
-                        THEN 'AVAILABLE'
-
-                    ELSE 'PENDING'
-                END AS status
-
-            FROM config.assessment_module am
-
-            LEFT JOIN latest_module_instance lmi
-                ON lmi.assessment_module_id =
-                   am.assessment_module_id
-               AND lmi.rn = 1
-
-            WHERE TRIM(am.record_status) = 'A'
-              AND (
-                    CAST(:search AS VARCHAR) IS NULL
-                    OR am.module_name ILIKE
-                       CONCAT('%', CAST(:search AS VARCHAR), '%')
-                  )
-
-            GROUP BY
+                s.assessment_session_id,
                 am.assessment_module_id,
-                am.module_name,
-                am.display_order
+                ami.assessment_module_instance_id,
+                ami.percentage,
+                mst.status_code,
+                ROW_NUMBER() OVER (
+                    PARTITION BY
+                        s.assessment_session_id,
+                        am.assessment_module_id
+                    ORDER BY
+                        ami.created_on DESC,
+                        ami.sequence_no DESC
+                ) AS rn
+            FROM assessment.assessment_session s
+            JOIN assessment.assessment_attempt aa
+                ON aa.assessment_session_id =
+                   s.assessment_session_id
+            JOIN assessment.assessment_module_instance ami
+                ON ami.assessment_attempt_id =
+                   aa.assessment_attempt_id
+            JOIN config.assessment_module am
+                ON am.assessment_module_id =
+                   ami.assessment_module_id
+            JOIN assessment.module_status mst
+                ON mst.module_status_id =
+                   ami.module_status_id
+            WHERE ami.is_deleted = FALSE
+              AND TRIM(s.record_status) = 'A'
+        )
+        SELECT
+            am.assessment_module_id AS assessment_id,
+            am.module_name AS assessment_name,
 
-            ORDER BY
-                am.display_order NULLS LAST,
-                am.module_name
+            COUNT(lmi.assessment_session_id) AS assigned,
 
-            LIMIT :size OFFSET :offset
-            """;
+            COUNT(lmi.assessment_session_id)
+                FILTER (
+                    WHERE lmi.status_code = 'COMPLETED'
+                ) AS completed,
+
+            0 AS passed,
+            0 AS failed,
+
+            AVG(lmi.percentage)
+                FILTER (
+                    WHERE lmi.status_code = 'COMPLETED'
+                ) AS avg_score,
+
+            CASE
+                WHEN COUNT(lmi.assessment_session_id) = 0
+                    THEN 'NOT_ASSIGNED'
+
+                WHEN COUNT(lmi.assessment_session_id)
+                    FILTER (
+                        WHERE lmi.status_code = 'COMPLETED'
+                    ) = COUNT(lmi.assessment_session_id)
+                    THEN 'COMPLETED'
+
+                WHEN COUNT(lmi.assessment_session_id)
+                    FILTER (
+                        WHERE lmi.status_code = 'IN_PROGRESS'
+                    ) > 0
+                    THEN 'IN_PROGRESS'
+
+                WHEN COUNT(lmi.assessment_session_id)
+                    FILTER (
+                        WHERE lmi.status_code = 'AVAILABLE'
+                    ) > 0
+                    THEN 'AVAILABLE'
+
+                ELSE 'PENDING'
+            END AS status
+
+        FROM config.assessment_module am
+
+        LEFT JOIN latest_module_instance lmi
+            ON lmi.assessment_module_id =
+               am.assessment_module_id
+           AND lmi.rn = 1
+
+        WHERE TRIM(am.record_status) = 'A'
+          AND (
+                CAST(:search AS VARCHAR) IS NULL
+                OR am.module_name ILIKE
+                   CONCAT('%', CAST(:search AS VARCHAR), '%')
+              )
+
+        GROUP BY
+            am.assessment_module_id,
+            am.module_name,
+            am.display_order
+
+        ORDER BY
+            am.display_order NULLS LAST,
+            am.module_name
+
+        LIMIT :size OFFSET :offset
+        """;
 
         List<Object[]> rows = entityManager
                 .createNativeQuery(sql)
@@ -129,7 +130,8 @@ public class AssessmentReportRepository {
                         "search",
                         search == null || search.isBlank()
                                 ? null
-                                : search.trim())
+                                : search.trim()
+                )
                 .setParameter("size", size)
                 .setParameter("offset", (long) (page - 1) * size)
                 .getResultList();
@@ -141,24 +143,44 @@ public class AssessmentReportRepository {
             AssessmentReportResponse dto =
                     new AssessmentReportResponse();
 
+            // 0: assessment_module_id
+            dto.setAssessmentId(
+                    row[0] != null
+                            ? ((Number) row[0]).intValue()
+                            : null
+            );
+
+            // 1: assessment_name
             dto.setAssessmentName(
-                    row[0] != null ? row[0].toString() : null);
+                    row[1] != null ? row[1].toString() : null
+            );
 
-            dto.setAssigned(((Number) row[1]).intValue());
-            dto.setCompleted(((Number) row[2]).intValue());
-            dto.setPassed(((Number) row[3]).intValue());
-            dto.setFailed(((Number) row[4]).intValue());
+            // 2: assigned
+            dto.setAssigned(((Number) row[2]).intValue());
 
-            BigDecimal avgScore = row[5] != null
-                    ? new BigDecimal(row[5].toString())
+            // 3: completed
+            dto.setCompleted(((Number) row[3]).intValue());
+
+            // 4: passed
+            dto.setPassed(((Number) row[4]).intValue());
+
+            // 5: failed
+            dto.setFailed(((Number) row[5]).intValue());
+
+            // 6: avg_score
+            BigDecimal avgScore = row[6] != null
+                    ? new BigDecimal(row[6].toString())
                     : BigDecimal.ZERO;
 
             dto.setAvgScore(
                     avgScore.setScale(2, RoundingMode.HALF_UP)
-                            .toPlainString());
+                            .toPlainString()
+            );
 
+            // 7: status
             dto.setStatus(
-                    row[6] != null ? row[6].toString() : null);
+                    row[7] != null ? row[7].toString() : null
+            );
 
             reports.add(dto);
         }
