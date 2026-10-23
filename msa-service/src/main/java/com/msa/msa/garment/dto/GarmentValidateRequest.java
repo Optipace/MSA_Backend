@@ -13,5 +13,5 @@ public class GarmentValidateRequest {
 
     private UUID assessmentModuleInstanceId;
 
-    private String batchId;
+    private Long batchId;
 }
