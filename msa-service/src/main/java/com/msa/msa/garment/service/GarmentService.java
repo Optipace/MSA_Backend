@@ -91,9 +91,8 @@ public class GarmentService {
                     "Assessment module instance ID is required");
         }
 
-        if (request.getBatchId() == null
-                || request.getBatchId().trim().isEmpty()) {
-            throw new BadRequestException("BatchID is required");
+        if (request.getBatchId() == null || request.getBatchId() <= 0) {
+            throw new BadRequestException("BatchID must be a positive number");
         }
 
         // 1. Find module instance and verify ownership
@@ -136,7 +135,7 @@ public class GarmentService {
         // 6. Find garment by batchid
         GarmentInstance garment =
                 garmentInstanceRepository
-                        .findByBatchId(Long.valueOf(request.getBatchId().trim()))
+                        .findByBatchId(request.getBatchId())
                         .orElseThrow(() ->
                                 new BadRequestException(
                                         "Garment not found for the provided batchID"));
