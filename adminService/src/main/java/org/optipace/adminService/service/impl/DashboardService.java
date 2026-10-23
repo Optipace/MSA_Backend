@@ -3,9 +3,17 @@ package org.optipace.adminService.service.impl;
 import lombok.RequiredArgsConstructor;
 import org.optipace.adminService.dto.response.*;
 import org.optipace.adminService.enums.CustomStatus;
+import org.optipace.adminService.repository.AssessmentReportRepository;
 import org.optipace.adminService.repository.DashboardRepository;
+import org.optipace.adminService.repository.EmployeeReportRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
-
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import java.util.List;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -16,6 +24,8 @@ import java.util.List;
 public class DashboardService {
 
     private final DashboardRepository dashboardRepository;
+    private final EmployeeReportRepository employeeReportRepository;
+    private final AssessmentReportRepository assessmentReportRepository;
 
     public SingleResponse<DashboardSummaryProjection> getDashboardSummary() {
         DashboardSummaryProjection summary = dashboardRepository.getDashboardSummary();
@@ -132,7 +142,7 @@ public class DashboardService {
         );
     }
 
-    public SingleResponse<TopMissedAreasResponse> getTopMissedAreas() {
+    public SingleResponse<TopMissedAreasResponse>   getTopMissedAreas() {
 
         List<TopMissedAreaProjection> results =
                 dashboardRepository.getTopMissedAreas();
@@ -308,4 +318,154 @@ public class DashboardService {
         }
     }
 
+    @Transactional(readOnly = true)
+    public SingleResponse<EmployeeReportResponse> getEmployeeReport(
+            int page, int size, String search) {
+
+        if (page < 0) {
+            throw new IllegalArgumentException(
+                    "Page number cannot be negative");
+        }
+
+        if (size < 1 || size > 100) {
+            throw new IllegalArgumentException(
+                    "Page size must be between 1 and 100");
+        }
+
+        String searchText = (search == null || search.isBlank())
+                ? null
+                : search.trim();
+
+        Pageable pageable = PageRequest.of(page, size);
+
+        Page<EmployeeReportProjection> employeePage =
+                employeeReportRepository.findEmployeeReport(
+                        searchText, pageable);
+
+        List<EmployeeReportItem> employees =
+                employeePage.getContent()
+                        .stream()
+                        .map(record -> {
+                            EmployeeReportItem item =
+                                    new EmployeeReportItem();
+
+                            item.setEmployeeId(record.getEmployeeId());
+                            item.setEmployeeName(record.getEmployeeName());
+                            item.setDepartment(record.getDepartment());
+                            item.setFactory(record.getFactory());
+
+                            item.setAssessment(
+                                    record.getCompletedAssessments()
+                                            + "/"
+                                            + record.getTotalAssessments());
+
+                            item.setOverallScore(record.getOverallScore());
+                            item.setResult(record.getResult());
+
+                            return item;
+                        })
+                        .toList();
+
+        EmployeeReportResponse response =
+                new EmployeeReportResponse();
+
+        response.setEmployees(employees);
+        response.setTotalEmployees((int) employeePage.getTotalElements());
+        response.setTotalPages(employeePage.getTotalPages());
+        response.setCurrentPage(employeePage.getNumber());
+        response.setPageSize(employeePage.getSize());
+
+        return SingleResponse.success(response);
+    }
+
+
+    @Transactional(readOnly = true)
+    public SingleResponse<EmployeeDetailsResponse> getEmployeeDetails(
+            String employeeId) {
+
+        if (employeeId == null || employeeId.isBlank()) {
+            throw new IllegalArgumentException(
+                    "Employee ID cannot be blank");
+        }
+
+        EmployeeDetailsResponse response =
+                employeeReportRepository.findEmployeeDetails(
+                        employeeId.trim());
+
+        if (response == null) {
+            throw new IllegalArgumentException(
+                    "Employee not found: " + employeeId);
+        }
+
+        return SingleResponse.success(response);
+    }
+
+    @Transactional(readOnly = true)
+    public SingleResponse<List<AssessmentReportResponse>>
+    getAssessmentReportList(int page, int size, String search) {
+
+        if (page < 1) {
+            throw new IllegalArgumentException(
+                    "Page number must be at least 1");
+        }
+
+        if (size < 1 || size > 100) {
+            throw new IllegalArgumentException(
+                    "Page size must be between 1 and 100");
+        }
+
+        List<AssessmentReportResponse> reports =
+                assessmentReportRepository.findAssessmentReportList(
+                        page, size, search);
+
+        return SingleResponse.success(reports);
+    }
+
+    @Transactional(readOnly = true)
+    public SingleResponse<AssessmentDashboardResponse> getAssessmentReport(
+            Long assessmentId,
+            int page,
+            int size,
+            String search) {
+
+        if (assessmentId == null || assessmentId <= 0) {
+            throw new IllegalArgumentException(
+                    "Assessment ID must be greater than zero");
+        }
+
+        if (page < 1) {
+            throw new IllegalArgumentException(
+                    "Page number must be at least 1");
+        }
+
+        if (size < 1 || size > 100) {
+            throw new IllegalArgumentException(
+                    "Page size must be between 1 and 100");
+        }
+
+        String searchText = (search == null || search.isBlank())
+                ? null
+                : search.trim();
+
+        PerformanceSummaryResponse summary =
+                assessmentReportRepository.getPerformanceSummary(
+                        assessmentId);
+
+        List<ScoreDistributionResponse> distribution =
+                assessmentReportRepository.getScoreDistribution(
+                        assessmentId);
+
+        List<EmployeeAssessmentResponse> employeeResults =
+                assessmentReportRepository.getEmployeeResults(
+                        assessmentId, page, size, searchText);
+
+        AssessmentDashboardResponse response =
+                AssessmentDashboardResponse.builder()
+                        .performanceSummary(summary)
+                        .scoreDistribution(distribution)
+                        .employeeResults(employeeResults)
+                        .build();
+
+        return SingleResponse.success(response);
+    }
 }

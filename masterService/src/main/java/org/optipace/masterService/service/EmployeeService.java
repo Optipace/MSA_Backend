@@ -34,4 +34,6 @@ public interface EmployeeService {
     // ============ Add Admin ⭐ ============
     SingleResponse<?> addAdmin(AddAdminRequest request, String adminId);
 
+    SingleResponse<?> updateAdmin(Long employeeId, AddAdminRequest request);
+
 }

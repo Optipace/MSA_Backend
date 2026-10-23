@@ -508,28 +508,47 @@ public class EmployeeServiceImpl implements EmployeeService {
 
 	@Override
 	public SingleResponse<?> addAdmin(AddAdminRequest request, String adminId) {
-
 		log.info("Creating admin: adminId={}, email={}", request.getAdminId(), request.getEmail());
+		
+		 // 1a. Check if Employee Code (Admin ID) already exists
+        if (employeeRepository.existsByEmployeeCode(request.getAdminId())) {
+            throw new BadRequestException("Admin ID '" + request.getAdminId() + "' already exists.");
+        }
 
-		// 1. Save admin (own transaction, commits before auth-service call)
+        // 1b. Check if Email already exists
+        if (employeeRepository.existsByEmail(request.getEmail())) {
+            throw new BadRequestException("Email '" + request.getEmail() + "' is already in use.");
+        }
+
+        // 1c. Check if Organization exists
+        if (!organizationRepository.existsById(request.getOrganizationId())) {
+            throw new BadRequestException("Organization with ID " + request.getOrganizationId() + " does not exist.");
+        }
+        
+		// 1. Save to master.employee (Own transaction, commits immediately)
 		Employee saved = createAdminInOwnTransaction(request, adminId);
 
-		// 2. Register login in auth-service
+		// 2. Register login in auth-service via Feign
 		String plainPassword = generateSystemPassword();
 		try {
 			EmployeeLoginDto loginDto = new EmployeeLoginDto();
 			loginDto.setEmployeeId(saved.getEmployeeId());
 			loginDto.setUsername(saved.getEmail());
 			loginDto.setPlainTextPassword(plainPassword);
-			// loginDto.setRoleId(adminId); // uses SUPER_ADMIN or ADMIN role
+
+			// ⭐ Set the default Role ID (2L = FACTORY_ADMIN based on your screenshot)
+			loginDto.setRoleId(2L);
 
 			authServiceClient.registerEmployeeLogin(loginDto);
-			log.info("Login registered for admin ID: {}", saved.getEmployeeId());
+			log.info("Login registered successfully in authService for admin ID: {}", saved.getEmployeeId());
 
 		} catch (FeignException e) {
-			log.error("Auth service failed: {}", e.contentUTF8());
-			// deleteEmployeeInOwnTransaction(saved.getEmployeeId());
-			throw new MicroserviceException(e.status(), "Auth Service Error");
+			log.error("Auth service failed! Status: {}, Body: {}", e.status(), e.contentUTF8());
+
+			// ⭐ ROLLBACK: Delete the employee since auth failed
+			deleteEmployeeInOwnTransaction(saved.getEmployeeId());
+
+			throw new MicroserviceException(e.status(), "Auth Service Error: " + e.contentUTF8());
 		}
 
 		return new SingleResponse<>(saved.getEmployeeId(), CustomStatus.SUCCESS);
@@ -537,107 +556,99 @@ public class EmployeeServiceImpl implements EmployeeService {
 
 	@Transactional(propagation = Propagation.REQUIRES_NEW)
 	public Employee createAdminInOwnTransaction(AddAdminRequest request, String adminId) {
+		
+		Long orgId = request.getOrganizationId() != null ? request.getOrganizationId() : 1L;
+		// Your existing logic to build and save the employee
+		Employee employee = new Employee();
+		employee.setDateOfJoining(LocalDate.now()); 
+		employee.setFactory(factoryRepository.getReferenceById(1L));
+		employee.setDepartment(departmentRepository.getReferenceById(1L));
+		employee.setShift(shiftRepository.getReferenceById(1L));
+		employee.setSection(sectionRepository.getReferenceById(1L));
+		employee.setDesignation(designationRepository.getReferenceById(1L));
+		employee.setEmployeeCode(request.getAdminId());
+		employee.setFirstName(request.getAdminName()); // Or split into first/last
+		employee.setEmail(request.getEmail());
+		employee.setMobileNumber(request.getPhoneNumber());
+		// ... set other fields ...
+		employee.setRecordStatus('A'); 
+		employee.setOrganization(organizationRepository.getReferenceById(orgId));
+		// We hardcoded these IDs to 1L
+		employee.setDepartment(departmentRepository.getReferenceById(1L));
+		employee.setFactory(factoryRepository.getReferenceById(1L));
+		employee.setShift(shiftRepository.getReferenceById(1L));
+		employee.setDesignation(designationRepository.getReferenceById(1L)); // ⭐ Failing here
+		employee.setSection(sectionRepository.getReferenceById(1L));
+		
+		return employeeRepository.saveAndFlush(employee);
+	}
 
-		// Duplicate checks
-		if (employeeRepository.existsByEmployeeCode(request.getAdminId())) {
-			throw new BadRequestException("Admin ID '" + request.getAdminId() + "' already exists");
-		}
-		if (employeeRepository.existsByEmail(request.getEmail())) {
-			throw new BadRequestException("Email '" + request.getEmail() + "' already exists");
-		}
-		if (employeeRepository.existsByMobileNumber(request.getPhoneNumber())) {
-			throw new BadRequestException("Phone number already exists");
-		}
+	@Transactional(propagation = Propagation.REQUIRES_NEW)
+	public void deleteEmployeeInOwnTransaction(Long employeeId) {
+		employeeRepository.deleteById(employeeId);
+		log.info("Rolled back employee ID: {}", employeeId);
+	}
 
-		// Organization must exist
-		if (!organizationRepository.existsById(request.getOrganizationId())) {
-			throw new ResourceNotFoundException("Organization", "organizationId", request.getOrganizationId());
-		}
+	@Override
+	@Transactional // Standard transaction is fine for updating
+	public SingleResponse<?> updateAdmin(Long employeeId, AddAdminRequest request) {
+	    log.info("Updating admin with ID: {}", employeeId);
 
-		// Split adminName into first + last
-		String fullName = request.getAdminName().trim();
-		String firstName, lastName;
-		int spaceIdx = fullName.indexOf(' ');
-		if (spaceIdx > 0) {
-			firstName = fullName.substring(0, spaceIdx).trim();
-			lastName = fullName.substring(spaceIdx + 1).trim();
-		} else {
-			firstName = fullName;
-			lastName = ""; // no last name
-		}
+	    // 1. Find the existing employee
+	    Employee employee = employeeRepository.findById(employeeId)
+	            .orElseThrow(() -> new ResourceNotFoundException("Employee", "employeeId", employeeId));
 
-		// Build entity
-		Employee admin = new Employee();
-		admin.setEmployeeCode(request.getAdminId());
-		admin.setFirstName(firstName);
-		admin.setLastName(lastName.isEmpty() ? null : lastName);
-		admin.setEmail(request.getEmail());
-		admin.setMobileNumber(request.getPhoneNumber());
-		admin.setDateOfJoining(LocalDate.now());
-		// ⭐ HARDCODED FK defaults
-		admin.setOrganization(organizationRepository.getReferenceById(request.getOrganizationId()));
-		admin.setFactory(factoryRepository.getReferenceById(DEFAULT_FACTORY_ID));
-		admin.setDepartment(departmentRepository.getReferenceById(DEFAULT_DEPARTMENT_ID));
-		admin.setShift(shiftRepository.getReferenceById(DEFAULT_SHIFT_ID));
-		admin.setDesignation(designationRepository.getReferenceById(DEFAULT_DESIGNATION_ID));
-		admin.setSection(sectionRepository.getReferenceById(DEFAULT_SECTION_ID));
-		// Location — if you have a `currentLocation` field
-		// admin.setCurrentLocation(request.getLocation());
+	    // 2. Validation: Check if the new Email is used by a DIFFERENT employee
+	    if (!employee.getEmail().equals(request.getEmail()) 
+	            && employeeRepository.existsByEmail(request.getEmail())) {
+	        throw new BadRequestException("Email '" + request.getEmail() + "' is already in use by another admin.");
+	    }
 
-		// Organization FK
-		admin.setOrganization(organizationRepository.getReferenceById(request.getOrganizationId()));
+	    // 3. Validation: Check if the new Admin ID (employee code) is used by a DIFFERENT employee
+	    if (!employee.getEmployeeCode().equals(request.getAdminId()) 
+	            && employeeRepository.existsByEmployeeCode(request.getAdminId())) {
+	        throw new BadRequestException("Admin ID '" + request.getAdminId() + "' is already in use.");
+	    }
 
-		// Audit
-		admin.setCreatedBy(Long.parseLong(adminId));
-		admin.setVersionNo(1);
-		admin.setRecordStatus('A');
+	    // 4. Update the fields
+	    employee.setEmployeeCode(request.getAdminId());
+	    
+	    // Split Admin Name into First and Last Name
+	    String[] names = request.getAdminName().trim().split(" ", 2);
+	    employee.setFirstName(names[0]);
+	    employee.setLastName(names.length > 1 ? names[1] : null);
 
-		// Save
-		Employee saved = employeeRepository.saveAndFlush(admin);
-		log.info("Admin saved with employee ID: {}", saved.getEmployeeId());
+	    employee.setEmail(request.getEmail());
+	    employee.setMobileNumber(request.getPhoneNumber());
+	    
+	    // Update Organization if it changed
+	    if (!employee.getOrganization().getOrganizationId().equals(request.getOrganizationId())) {
+	        employee.setOrganization(organizationRepository.getReferenceById(request.getOrganizationId()));
+	    }
 
-		// --------------------------- New code -------------//
+	    // Save the updated employee
+	    Employee updated = employeeRepository.saveAndFlush(employee);
+	    log.info("Admin updated successfully in DB for ID: {}", employeeId);
 
-		String plainPassword = generateSystemPassword();
-		try {
-			EmployeeLoginDto employeeLoginDto = new EmployeeLoginDto();
-			employeeLoginDto.setEmployeeId(admin.getEmployeeId());
-			employeeLoginDto.setUsername(admin.getEmail());
-			employeeLoginDto.setPlainTextPassword(plainPassword);
-			// employeeLoginDto.setRoleId(request.getRoleId());
+	    // =====================================================
+	    // ⭐ 5. SYNC WITH AUTH SERVICE (If Email/Username changed)
+	    // =====================================================
+	    // If you need to update the login email in authService, you must call Feign.
+	    // (Assuming you have an endpoint in authService to update the username)
+	    /*
+	    try {
+	        UpdateLoginDto loginDto = new UpdateLoginDto();
+	        loginDto.setEmployeeId(employeeId);
+	        loginDto.setNewUsername(updated.getEmail());
+	        authServiceClient.updateUsername(loginDto);
+	    } catch (Exception e) {
+	        log.error("Failed to sync new email with authService", e);
+	        // You can choose to rollback the transaction here if required
+	        throw new MicroserviceException(500, "Failed to sync email with Auth Service");
+	    }
+	    */
 
-			authServiceClient.registerEmployeeLogin(employeeLoginDto);
-
-//            sendWelcomeEmail(employee.getEmail(), employee.getFirstName(), employee.getEmployeeCode(), plainPassword); // Need to send password in production
-
-		} catch (FeignException e) {
-
-			String exactErrorMessage = "Authentication setup failed in upstream service.";
-			try {
-				ObjectMapper mapper = new ObjectMapper();
-				JsonNode errorNode = mapper.readTree(e.contentUTF8());
-
-				if (errorNode.has("response") && errorNode.get("response").has("message")) {
-					exactErrorMessage = errorNode.get("response").get("message").asText();
-				} else if (errorNode.has("message")) {
-					exactErrorMessage = errorNode.get("message").asText();
-				}
-			} catch (Exception parseException) {
-				log.warn("Could not parse Feign error body", parseException);
-			}
-
-			throw new MicroserviceException(e.status(),
-					"Auth Service Error for " + request.getAdminId() + ": " + exactErrorMessage);
-
-		} catch (Exception e) {
-
-			throw new MicroserviceException(500,
-					"Employee creation aborted for " + request.getAdminId() + " due to an internal system error.");
-		}
-
-		// ------------------------- end -----------//
-
-		return saved;
+	    return new SingleResponse<>(updated.getEmployeeId(), CustomStatus.SUCCESS);
 	}
 
 //    @Async

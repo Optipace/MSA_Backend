@@ -66,6 +66,6 @@ public class GarmentInstance {
     private UUID garmentLotId;
 
     @Column(name = "batch_id")
-    private String batchId;
+    private Long batchId;
 
 }

@@ -1,6 +1,7 @@
 package org.optipace.masterService.client;
 
 import org.optipace.masterService.dto.request.EmployeeLoginDto;
+import org.optipace.masterService.dto.request.EmployeeLoginRequest;
 import org.optipace.masterService.dto.response.SingleResponse;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -14,7 +15,10 @@ public interface AuthServiceClient {
 
     @PostMapping("/v1/internal/register-login")
     SingleResponse<?> registerEmployeeLogin(@RequestBody EmployeeLoginDto request);
-
+    
+    @PostMapping("/v1/internal/create-admin")
+    SingleResponse<?> createAdminLogin(@RequestBody EmployeeLoginRequest request);
+    
     @PostMapping("/v1/internal/roles/batch")
     SingleResponse<Map<Long, Long>> getRoleIdsForEmployees(@RequestBody List<Long> employeeIds);
 }

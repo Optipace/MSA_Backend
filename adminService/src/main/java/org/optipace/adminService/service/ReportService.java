@@ -2,6 +2,8 @@ package org.optipace.adminService.service;
 
 import java.util.List;
 
+import org.optipace.adminService.dto.request.UpdateAdminStatusRequest;
+import org.optipace.adminService.dto.response.AdminListResponse;
 import org.optipace.adminService.dto.response.OrgAdminCountResponse;
 import org.optipace.adminService.dto.response.OrganizationOverviewReportResponse;
 import org.optipace.adminService.dto.response.OrganizationOverviewResponse;
@@ -17,7 +19,15 @@ public interface ReportService {
     //SingleResponse<OrganizationOverviewResponse> getOrganizationOverview(Long superAdminId);
 
     SingleResponse<OrganizationOverviewReportResponse> getOrganizationOverview(Long superAdminId);
+    
+    // Get Total Admin count
+    SingleResponse<Long> getTotalAdminCount(Long userAdminId);
+    
+    SingleResponse<Long> getTotalPackageCount();
 
+    SingleResponse<List<AdminListResponse>> getAllAdminsBySuperAdmin(Long superAdminId);
+
+    SingleResponse<?> updateAdminStatus(Long employeeId, UpdateAdminStatusRequest request, String adminId);
 
 
 }
