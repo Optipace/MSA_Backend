@@ -67,33 +67,68 @@ public class AssessorReportViewRepository {
     /**
      * Query 2: Fetch test breakdown for Bar Chart & Table Rows
      */
-    public List<Map<String, Object>> getAssessmentDetailsBySessionId(UUID sessionId) {
+    public List<Map<String, Object>> getAssessmentDetailsBySessionId(
+            UUID sessionId) {
+
         String sql = """
-            SELECT 
+            SELECT
                 ami.assessment_module_id AS "moduleId",
                 am.module_name AS "testName",
                 ami.started_on::text AS "testDate",
-                ROUND(COALESCE(ami.obtained_score, 0)::numeric, 0) AS "obtainedScore",
-                ROUND(COALESCE(ami.maximum_score, 0)::numeric, 0) AS "totalScore",
-                ROUND(COALESCE(ami.percentage, 0)::numeric, 0) AS "percentage",
-                CASE 
-                    WHEN ami.percentage >= t.pass_percentage THEN 'Passed'
-                    ELSE 'Failed'
-                END AS "result"
-            FROM assessment.assessment_session s
-            JOIN config.assessment_template t 
-                ON s.assessment_template_id = t.assessment_template_id
-            JOIN assessment.assessment_attempt aa 
-                ON s.assessment_session_id = aa.assessment_session_id
-            JOIN assessment.assessment_module_instance ami 
-                ON aa.assessment_attempt_id = ami.assessment_attempt_id
-            JOIN config.assessment_module am 
-                ON ami.assessment_module_id = am.assessment_module_id
-            WHERE s.assessment_session_id = ?
-            ORDER BY am.display_order
-        """;
 
-        //log.debug("Fetching assessment details for session ID: {}", sessionId);
+                ROUND(
+                    COALESCE(ami.obtained_score, 0)::numeric, 0
+                ) AS "obtainedScore",
+
+                ROUND(
+                    COALESCE(ami.maximum_score, 0)::numeric, 0
+                ) AS "totalScore",
+
+                ROUND(
+                    COALESCE(ami.percentage, 0)::numeric, 0
+                ) AS "percentage",
+
+                COALESCE(ms.status_code, 'PENDING')
+                    AS "moduleStatus",
+
+                CASE
+                    WHEN ms.status_code = 'COMPLETED'
+                         AND ami.percentage >= t.pass_percentage
+                        THEN 'Passed'
+
+                    WHEN ms.status_code = 'COMPLETED'
+                        THEN 'Failed'
+
+                    ELSE 'Pending'
+                END AS "result"
+
+            FROM assessment.assessment_session s
+
+            JOIN config.assessment_template t
+                ON s.assessment_template_id =
+                   t.assessment_template_id
+
+            JOIN assessment.assessment_attempt aa
+                ON s.assessment_session_id =
+                   aa.assessment_session_id
+
+            JOIN assessment.assessment_module_instance ami
+                ON aa.assessment_attempt_id =
+                   ami.assessment_attempt_id
+
+            JOIN config.assessment_module am
+                ON ami.assessment_module_id =
+                   am.assessment_module_id
+
+            LEFT JOIN assessment.module_status ms
+                ON ami.module_status_id =
+                   ms.module_status_id
+
+            WHERE s.assessment_session_id = ?
+
+            ORDER BY am.display_order
+            """;
+
         return jdbcTemplate.queryForList(sql, sessionId);
     }
 }
