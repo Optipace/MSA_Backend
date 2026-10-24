@@ -8,9 +8,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
 import java.util.Map;
 
 @Slf4j
@@ -22,19 +22,23 @@ public class AssessorReportController {
     private final AssessorReportService assessorReportService;
 
     /**
-     * GET /assessor/report
+     * GET /assessor/report?page=0&size=10
      *
-     * Returns employee assessment reports.
+     * Returns paginated employee assessment reports.
      */
     @GetMapping
     @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'FACTORY_ADMIN', 'ASSESSOR')")
-    public ResponseEntity<SingleResponse<List<Map<String, Object>>>>
-            getAssessorReport() {
+    public ResponseEntity<SingleResponse<Map<String, Object>>>
+            getAssessorReport(
+                    @RequestParam(defaultValue = "0") int page,
+                    @RequestParam(defaultValue = "10") int size) {
 
-        log.info("REST request to get assessor report");
+        log.info(
+                "REST request to get assessor report: page={}, size={}",
+                page, size);
 
         return ResponseEntity.ok(
-                assessorReportService.getAssessorReport()
+                assessorReportService.getAssessorReport(page, size)
         );
     }
 }

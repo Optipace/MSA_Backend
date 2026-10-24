@@ -10,4 +10,5 @@ public class AssessmentReportResponse {
     private Integer failed;
     private String avgScore;
     private String status;
+    private Integer assessmentId;
 }
