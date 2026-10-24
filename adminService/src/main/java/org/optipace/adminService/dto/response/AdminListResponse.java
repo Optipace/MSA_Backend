@@ -16,6 +16,9 @@ public class AdminListResponse {
 	private String email;
 	private String phoneNumber;
 	private String organizationName;
+	private String location;       // 7
 	private String roleName; // e.g., FACTORY_ADMIN
 	private String status; // Active / Inactive
+	
+	
 }

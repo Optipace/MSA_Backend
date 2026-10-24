@@ -8,7 +8,9 @@ import org.optipace.adminService.dto.response.OrgAdminCountResponse;
 import org.optipace.adminService.dto.response.OrganizationOverviewReportResponse;
 import org.optipace.adminService.dto.response.OrganizationOverviewResponse;
 import org.optipace.adminService.dto.response.OrganizationPlanReportResponse;
+import org.optipace.adminService.dto.response.OrganizationUsageResponse;
 import org.optipace.adminService.dto.response.PackageChartDataResponse;
+import org.optipace.adminService.dto.response.PageResponse;
 import org.optipace.adminService.dto.request.SuperAdminAssessmentReportDto;
 import org.optipace.adminService.dto.request.UpdateAdminStatusRequest;
 import org.optipace.adminService.dto.response.SingleResponse;
@@ -157,12 +159,22 @@ public class ReportServiceImpl implements ReportService {
 	}
 
 	@Override
-	public SingleResponse<List<AdminListResponse>> getAllAdminsBySuperAdmin(Long superAdminId) {
+	  public SingleResponse<PageResponse<AdminListResponse>> getAllAdminsBySuperAdmin(
+	            Long superAdminId, Pageable pageable) {
 		log.info("Fetching all admins created by Super Admin: {}", superAdminId);
 
-		List<AdminListResponse> adminList = employeeRepository.findAllAdminsBySuperAdmin(superAdminId);
+		//List<AdminListResponse> adminList = employeeRepository.findAllAdminsBySuperAdmin(superAdminId);
 
-		return new SingleResponse<>(adminList, CustomStatus.SUCCESS);
+		//return new SingleResponse<>(adminList, CustomStatus.SUCCESS);
+		
+		   // 1. Fetch the paginated data from the DB
+        Page<AdminListResponse> page = employeeRepository.findAllAdminsBySuperAdmin(superAdminId, pageable);
+
+        // 2. Convert Spring's Page to your custom PageResponse
+        PageResponse<AdminListResponse> pageResponse = PageResponse.of(page);
+
+        // 3. Wrap in your standard SingleResponse
+        return SingleResponse.of(pageResponse);
 	}
 
 	@Override
@@ -191,6 +203,14 @@ public class ReportServiceImpl implements ReportService {
 		employeeRepository.updateLoginLockStatus(employeeId, shouldLockAccount);
 
 		return new SingleResponse<>("Admin status updated successfully", CustomStatus.SUCCESS);
+	}
+	
+	
+	@Override
+	public SingleResponse<PageResponse<OrganizationUsageResponse>> getOrganizationUsage(String search, Pageable pageable) {
+	    String searchParam = (search != null && search.trim().isEmpty()) ? null : search;
+	    Page<OrganizationUsageResponse> page = organizationRepository.findAllOrganizationUsage(searchParam, pageable);
+	    return SingleResponse.of(PageResponse.of(page));
 	}
 
 }

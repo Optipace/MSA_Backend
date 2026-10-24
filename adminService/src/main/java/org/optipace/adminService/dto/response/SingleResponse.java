@@ -1,5 +1,7 @@
 package org.optipace.adminService.dto.response;
 
+import java.util.List;
+
 import org.optipace.adminService.dto.response.Response;
 import org.optipace.adminService.enums.CustomStatus;
 import com.fasterxml.jackson.annotation.JsonInclude;
@@ -48,6 +50,12 @@ public class SingleResponse<T> {
         return new SingleResponse<>(data, new ResponseInfo(code, message));
     }
     
+ // NEW — this is what makes SingleResponse.of(PageResponse<...>) compile
+    public static <T> SingleResponse<T> of(T data) {
+        SingleResponse<T> r = new SingleResponse<>();
+        r.setData(data);
+        return r;
+    }
     // ==================== INNER CLASS ====================
     @Data
     @NoArgsConstructor

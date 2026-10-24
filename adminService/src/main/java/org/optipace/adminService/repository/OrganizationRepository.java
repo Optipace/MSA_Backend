@@ -2,10 +2,13 @@ package org.optipace.adminService.repository;
 
 import java.util.List;
 
+import org.optipace.adminService.dto.response.OrganizationUsageResponse;
 import org.optipace.adminService.dto.response.OrgAdminCountResponse;
 import org.optipace.adminService.dto.response.OrganizationOverviewReportResponse;
 import org.optipace.adminService.dto.response.OrganizationOverviewResponse;
 import org.optipace.adminService.entity.Organization;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -66,4 +69,35 @@ public interface OrganizationRepository extends JpaRepository<Organization, Long
         """, nativeQuery = true)
         // ⭐ Return type MUST be the inner class
         List<OrganizationOverviewReportResponse.OrganizationRow> getOrganizationOverviewByAdmin(@Param("superAdminId") Long superAdminId);
- }
+ 
+    @Query(
+            value = """
+                SELECT 
+                    o.organization_name AS "organizationName",
+                    p.package_name AS "planName",
+                    op.total_points AS "totalUsage",
+                    op.used_points AS "used",
+                    op.available_points AS "remaining",
+                    op.expiry_date AS "validUntil"
+                FROM packages.organization_points op
+                JOIN master.organization o ON op.organization_id = o.organization_id
+                JOIN packages.organization_package org_pkg ON op.organization_package_id = org_pkg.organization_package_id
+                JOIN packages.package p ON org_pkg.package_id = p.package_id
+                WHERE (:search IS NULL OR LOWER(o.organization_name) LIKE LOWER(CONCAT('%', :search, '%')))
+                ORDER BY op.created_on DESC
+                """,
+            countQuery = """
+                SELECT COUNT(*)
+                FROM packages.organization_points op
+                JOIN master.organization o ON op.organization_id = o.organization_id
+                JOIN packages.organization_package org_pkg ON op.organization_package_id = org_pkg.organization_package_id
+                JOIN packages.package p ON org_pkg.package_id = p.package_id
+                WHERE (:search IS NULL OR LOWER(o.organization_name) LIKE LOWER(CONCAT('%', :search, '%')))
+                """,
+            nativeQuery = true
+        )
+        Page<OrganizationUsageResponse> findAllOrganizationUsage(
+                @Param("search") String search,
+                Pageable pageable
+        );
+}

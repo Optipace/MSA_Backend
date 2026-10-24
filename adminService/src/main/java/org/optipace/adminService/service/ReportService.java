@@ -8,6 +8,8 @@ import org.optipace.adminService.dto.response.OrgAdminCountResponse;
 import org.optipace.adminService.dto.response.OrganizationOverviewReportResponse;
 import org.optipace.adminService.dto.response.OrganizationOverviewResponse;
 import org.optipace.adminService.dto.response.OrganizationPlanReportResponse;
+import org.optipace.adminService.dto.response.OrganizationUsageResponse;
+import org.optipace.adminService.dto.response.PageResponse;
 import org.optipace.adminService.dto.response.SingleResponse;
 import org.springframework.data.domain.Pageable;
 
@@ -25,9 +27,18 @@ public interface ReportService {
     
     SingleResponse<Long> getTotalPackageCount();
 
-    SingleResponse<List<AdminListResponse>> getAllAdminsBySuperAdmin(Long superAdminId);
-
+   // SingleResponse<List<AdminListResponse>> getAllAdminsBySuperAdmin(Long superAdminId);
+    
+ // ✅ ADD THIS NEW LINE:
+    SingleResponse<PageResponse<AdminListResponse>> getAllAdminsBySuperAdmin(
+            Long superAdminId, 
+            Pageable pageable
+    );
+    
     SingleResponse<?> updateAdminStatus(Long employeeId, UpdateAdminStatusRequest request, String adminId);
 
-
+    SingleResponse<PageResponse<OrganizationUsageResponse>> getOrganizationUsage(
+            String search, 
+            Pageable pageable
+    );
 }
