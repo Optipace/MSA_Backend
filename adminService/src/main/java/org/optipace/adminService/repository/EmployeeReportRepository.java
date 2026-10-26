@@ -23,82 +23,90 @@ public class EmployeeReportRepository {
     @PersistenceContext
     private EntityManager entityManager;
 
+
     private static final String REPORT_QUERY = """
+    SELECT
+        e.employee_code AS employee_id,
+        CONCAT_WS(' ',
+            NULLIF(TRIM(e.first_name), ''),
+            NULLIF(TRIM(e.middle_name), ''),
+            NULLIF(TRIM(e.last_name), '')
+        ) AS employee_name,
+        d.department_name AS department,
+        f.factory_name AS factory,
+        COALESCE(mc.completed_count, 0) AS completed_assessments,
+        COALESCE(mc.total_count, 0) AS total_assessments,
+        fs.percentage AS overall_score,
+        fs.overall_result AS result
+
+    FROM master.employee e
+
+    JOIN master.department d
+        ON d.department_id = e.department_id
+
+    JOIN master.factory f
+        ON f.factory_id = e.factory_id
+
+    LEFT JOIN LATERAL (
+        SELECT s.assessment_session_id
+        FROM assessment.assessment_session s
+        JOIN assessment.assessment_status ast
+            ON ast.assessment_status_id = s.assessment_status_id
+        WHERE s.employee_id = e.employee_id
+          AND TRIM(s.record_status) = 'A'
+          AND ast.status_code = 'COMPLETED'
+        ORDER BY s.completed_on DESC NULLS LAST,
+                 s.created_on DESC
+        LIMIT 1
+    ) latest ON TRUE
+
+    LEFT JOIN assessment.final_score fs
+        ON fs.assessment_session_id = latest.assessment_session_id
+
+    LEFT JOIN LATERAL (
         SELECT
-            e.employee_code AS employee_id,
-            CONCAT_WS(' ',
-                NULLIF(TRIM(e.first_name), ''),
-                NULLIF(TRIM(e.middle_name), ''),
-                NULLIF(TRIM(e.last_name), '')
-            ) AS employee_name,
-            d.department_name AS department,
-            f.factory_name AS factory,
-            COALESCE(mc.completed_count, 0) AS completed_assessments,
-            COALESCE(mc.total_count, 0) AS total_assessments,
-            fs.percentage AS overall_score,
-            fs.overall_result AS result
+            COUNT(DISTINCT ami.assessment_module_id)
+                FILTER (
+                    WHERE ms.status_code = 'COMPLETED'
+                      AND ami.is_deleted = FALSE
+                ) AS completed_count,
+            (
+                SELECT COUNT(*)
+                FROM config.assessment_module am
+                WHERE TRIM(am.record_status) = 'A'
+            ) AS total_count
+        FROM assessment.assessment_module_instance ami
+        JOIN assessment.assessment_attempt aa
+            ON aa.assessment_attempt_id = ami.assessment_attempt_id
+        JOIN assessment.module_status ms
+            ON ms.module_status_id = ami.module_status_id
+        WHERE aa.assessment_session_id =
+              latest.assessment_session_id
+    ) mc ON TRUE
 
-        FROM master.employee e
+    WHERE TRIM(e.record_status) = 'A'
+      AND e.organization_id = :organisationId
+      AND e.factory_id = :factoryId
+      AND (
+          CAST(:search AS VARCHAR) IS NULL
+          OR CONCAT_WS(' ',
+              e.first_name,
+              e.middle_name,
+              e.last_name
+          ) ILIKE CONCAT('%', CAST(:search AS VARCHAR), '%')
+      )
 
-        JOIN master.department d
-            ON d.department_id = e.department_id
+    ORDER BY e.employee_id DESC
+    """;
 
-        JOIN master.factory f
-            ON f.factory_id = e.factory_id
 
-        LEFT JOIN LATERAL (
-            SELECT s.assessment_session_id
-            FROM assessment.assessment_session s
-            JOIN assessment.assessment_status ast
-                ON ast.assessment_status_id = s.assessment_status_id
-            WHERE s.employee_id = e.employee_id
-              AND TRIM(s.record_status) = 'A'
-              AND ast.status_code = 'COMPLETED'
-            ORDER BY s.completed_on DESC NULLS LAST,
-                     s.created_on DESC
-            LIMIT 1
-        ) latest ON TRUE
-
-        LEFT JOIN assessment.final_score fs
-            ON fs.assessment_session_id = latest.assessment_session_id
-
-        LEFT JOIN LATERAL (
-            SELECT
-                COUNT(DISTINCT ami.assessment_module_id)
-                    FILTER (
-                        WHERE ms.status_code = 'COMPLETED'
-                          AND ami.is_deleted = FALSE
-                    ) AS completed_count,
-                (
-                    SELECT COUNT(*)
-                    FROM config.assessment_module am
-                    WHERE TRIM(am.record_status) = 'A'
-                ) AS total_count
-            FROM assessment.assessment_module_instance ami
-            JOIN assessment.assessment_attempt aa
-                ON aa.assessment_attempt_id = ami.assessment_attempt_id
-            JOIN assessment.module_status ms
-                ON ms.module_status_id = ami.module_status_id
-            WHERE aa.assessment_session_id =
-                  latest.assessment_session_id
-        ) mc ON TRUE
-
-        WHERE TRIM(e.record_status) = 'A'
-          AND (
-              CAST(:search AS VARCHAR) IS NULL
-              OR CONCAT_WS(' ',
-                  e.first_name,
-                  e.middle_name,
-                  e.last_name
-              ) ILIKE CONCAT('%', CAST(:search AS VARCHAR), '%')
-          )
-        ORDER BY e.employee_id DESC
-        """;
 
     private static final String COUNT_QUERY = """
     SELECT COUNT(*)
     FROM master.employee e
     WHERE TRIM(e.record_status) = 'A'
+      AND e.organization_id = :organisationId
+      AND e.factory_id = :factoryId
       AND (
           CAST(:search AS VARCHAR) IS NULL
           OR CONCAT_WS(' ',
@@ -109,11 +117,20 @@ public class EmployeeReportRepository {
       )
     """;
 
+
+
     public Page<EmployeeReportProjection> findEmployeeReport(
-            String search, Pageable pageable) {
+            String search,
+            Pageable pageable,
+            Long organisationId,
+            Long factoryId) {
 
         Query query = entityManager.createNativeQuery(REPORT_QUERY);
+
         query.setParameter("search", search);
+        query.setParameter("organisationId", organisationId);
+        query.setParameter("factoryId", factoryId);
+
         query.setFirstResult((int) pageable.getOffset());
         query.setMaxResults(pageable.getPageSize());
 
@@ -134,16 +151,24 @@ public class EmployeeReportRepository {
                 .toList();
 
         Query countQuery = entityManager.createNativeQuery(COUNT_QUERY);
+
         countQuery.setParameter("search", search);
+        countQuery.setParameter("organisationId", organisationId);
+        countQuery.setParameter("factoryId", factoryId);
 
         long total = ((Number) countQuery.getSingleResult()).longValue();
 
         return new PageImpl<>(results, pageable, total);
     }
 
-    public EmployeeDetailsResponse findEmployeeDetails(String employeeId) {
+
+    public EmployeeDetailsResponse findEmployeeDetails(
+            String employeeId,
+            Long organisationId,
+            Long factoryId) {
 
         // 1. Fetch employee details and latest completed assessment
+        // Only return employees belonging to this organization and factory.
         String employeeQuery = """
         SELECT
             e.employee_code,
@@ -179,11 +204,15 @@ public class EmployeeReportRepository {
             ON fs.assessment_session_id = s.assessment_session_id
         WHERE TRIM(e.record_status) = 'A'
           AND e.employee_code = :employeeId
+          AND e.organization_id = :organisationId
+          AND e.factory_id = :factoryId
         """;
 
         List<Object[]> employeeRows = entityManager
                 .createNativeQuery(employeeQuery)
                 .setParameter("employeeId", employeeId)
+                .setParameter("organisationId", organisationId)
+                .setParameter("factoryId", factoryId)
                 .getResultList();
 
         if (employeeRows.isEmpty()) {
@@ -214,6 +243,7 @@ public class EmployeeReportRepository {
                 ? new BigDecimal(employee[5].toString())
                 : null;
 
+        // Kept available for any existing overall-result logic.
         String overallResult = employee[6] != null
                 ? employee[6].toString()
                 : null;
@@ -276,21 +306,14 @@ public class EmployeeReportRepository {
                         ? row[1].toString()
                         : null;
 
-                BigDecimal obtainedScore = row[3] != null
-                        ? new BigDecimal(row[3].toString())
-                        : null;
-
-                BigDecimal maximumScore = row[4] != null
-                        ? new BigDecimal(row[4].toString())
-                        : null;
-
                 BigDecimal percentage = row[5] != null
                         ? new BigDecimal(row[5].toString())
                         : null;
 
-                OffsetDateTime completedOn = row[6] instanceof OffsetDateTime
-                        ? (OffsetDateTime) row[6]
-                        : null;
+                OffsetDateTime completedOn =
+                        row[6] instanceof OffsetDateTime
+                                ? (OffsetDateTime) row[6]
+                                : null;
 
                 String moduleStatus = row[7] != null
                         ? row[7].toString()
@@ -322,11 +345,7 @@ public class EmployeeReportRepository {
                     result.setDate(completedOn.toLocalDate());
                 }
 
-                /*
-                 * Do not assign PASS/FAIL here unless your database
-                 * stores a module-level result or you have a defined
-                 * scoring rule for each module.
-                 */
+                // No module-level PASS/FAIL rule has been established.
                 result.setResult(null);
 
                 assessmentResults.add(result);
@@ -348,14 +367,10 @@ public class EmployeeReportRepository {
         summary.setCompletedAssessments(completedCount);
         summary.setTotalAssessments(totalModules.intValue());
 
-        /*
-         * These are placeholders because individual module PASS/FAIL
-         * rules have not been established in the current implementation.
-         */
         summary.setPassedAssessments(0);
         summary.setFailedAssessments(0);
 
-        // If you add overallResult to PerformanceSummaryResponse:
+        // If supported by your DTO:
         // summary.setOverallResult(overallResult);
 
         response.setPerformanceSummary(summary);
@@ -364,4 +379,5 @@ public class EmployeeReportRepository {
 
         return response;
     }
+
 }

@@ -7,23 +7,23 @@ import java.util.List;
 
 public interface DashboardRepository {
 
-    DashboardSummaryProjection getDashboardSummary();
+    DashboardSummaryProjection getDashboardSummary(Long organisationId, Long factoryId);
 
-    List<RecentAssessmentResponse> getRecentCompletedAssessments(int page, int size);
+    List<RecentAssessmentResponse> getRecentCompletedAssessments(int page, int size,Long organisationId, Long factoryId);
 
-    long countRecentCompletedAssessments();
+    long countRecentCompletedAssessments(Long organisationId, Long factoryId);
 
-    List<CompetencyDistributionProjection> findCompetencyDistribution();
+    List<CompetencyDistributionProjection> findCompetencyDistribution(Long organisationId, Long factoryId);
 
-    Long countDistinctEmployeesWithCompetencyRating();
+    Long countDistinctEmployeesWithCompetencyRating(Long organisationId, Long factoryId);
 
-    List<MsaTrendPointResponse> getMsaTrend(LocalDate startDate, LocalDate endDate);
+    List<MsaTrendPointResponse> getMsaTrend(LocalDate startDate, LocalDate endDate,Long organisationId, Long factoryId);
 
-    List<TopMissedDefectProjection> getTopMissedDefects();
+    List<TopMissedDefectProjection> getTopMissedDefects(Long organisationId, Long factoryId);
 
-    List<TopMissedAreaProjection> getTopMissedAreas();
+    List<TopMissedAreaProjection> getTopMissedAreas(Long organisationId, Long factoryId);
 
-    List<Object[]> getTestDistribution(Long assessmentModuleId);
+    List<Object[]> getTestDistribution(Long assessmentModuleId,Long organisationId, Long factoryId);
 
-    Long countEmployeesAssessedForTest(Long assessmentModuleId);
+    Long countEmployeesAssessedForTest(Long assessmentModuleId, Long organisationId, Long factoryId);
 }
