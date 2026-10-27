@@ -19,12 +19,24 @@ public class AssessorDashboardServiceImpl
     private final AssessorDashboardRepository assessorDashboardRepository;
 
     @Override
-    public SingleResponse<Map<String, Object>> getAssessorDashboard() {
+    public SingleResponse<Map<String, Object>> getAssessorDashboard(
+            Long organizationId,
+            Long factoryId,
+            int page,
+            int size) {
 
-        log.info("Fetching assessor dashboard");
+        log.info(
+                "Fetching assessor dashboard: organizationId={}, factoryId={}, page={}, size={}",
+                organizationId, factoryId, page, size
+        );
 
         Map<String, Object> result =
-                assessorDashboardRepository.getAssessorDashboard();
+                assessorDashboardRepository.getAssessorDashboard(
+                        organizationId,
+                        factoryId,
+                        page,
+                        size
+                );
 
         return new SingleResponse<>(
                 result,

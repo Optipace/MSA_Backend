@@ -17,7 +17,11 @@ public class AssessorReportRepository {
 
     private final JdbcTemplate jdbcTemplate;
 
-    public Map<String, Object> getAssessorReport(int page, int size) {
+    public Map<String, Object> getAssessorReport(
+            Long organizationId,
+            Long factoryId,
+            int page,
+            int size) {
 
         if (page < 0) {
             throw new IllegalArgumentException(
@@ -35,7 +39,7 @@ public class AssessorReportRepository {
             WITH report_data AS (
                 SELECT
                     s.assessment_session_id AS "sessionId",
-                    e.employee_code AS employeeId,
+                    e.employee_code AS "employeeId",
 
                     CONCAT_WS(
                         ' ',
@@ -76,7 +80,7 @@ public class AssessorReportRepository {
                         'N/A'
                     ) AS result,
 
-                    s.assigned_on AS assignedOn
+                    s.assigned_on AS "assignedOn"
 
                 FROM assessment.assessment_session s
 
@@ -104,6 +108,10 @@ public class AssessorReportRepository {
                     ON s.assessment_session_id =
                        fs.assessment_session_id
 
+                WHERE e.organization_id = ?
+                  AND e.record_status = 'A'
+                  AND (? IS NULL OR e.factory_id = ?)
+
                 GROUP BY
                     s.assessment_session_id,
                     e.employee_code,
@@ -122,62 +130,51 @@ public class AssessorReportRepository {
                 report_data.*,
                 COUNT(*) OVER() AS "totalElements"
             FROM report_data
-            ORDER BY assignedOn DESC NULLS LAST, "sessionId" DESC
+            ORDER BY "assignedOn" DESC NULLS LAST, "sessionId" DESC
             LIMIT ? OFFSET ?
             """;
 
         log.debug(
-                "Executing paginated assessor report: page={}, size={}",
-                page, size);
+                "Fetching assessor report: organizationId={}, factoryId={}, page={}, size={}",
+                organizationId, factoryId, page, size
+        );
 
         List<Map<String, Object>> rows = jdbcTemplate.query(
                 sql,
                 (rs, rowNum) -> {
+                    Map<String, Object> report = new LinkedHashMap<>();
 
-                    Map<String, Object> report =
-                            new LinkedHashMap<>();
-
-                    report.put("sessionId",
-                            rs.getObject("sessionId"));
-                    report.put("employeeId",
-                            rs.getString("employeeId"));
-                    report.put("employee",
-                            rs.getString("employee"));
-                    report.put("department",
-                            rs.getString("department"));
-                    report.put("factory",
-                            rs.getString("factory"));
-                    report.put("assessment",
-                            rs.getString("assessment"));
-                    report.put("overallScore",
-                            rs.getString("overallScore"));
-                    report.put("result",
-                            rs.getString("result"));
-                    report.put("totalElements",
-                            rs.getLong("totalElements"));
+                    report.put("sessionId", rs.getObject("sessionId"));
+                    report.put("employeeId", rs.getString("employeeId"));
+                    report.put("employee", rs.getString("employee"));
+                    report.put("department", rs.getString("department"));
+                    report.put("factory", rs.getString("factory"));
+                    report.put("assessment", rs.getString("assessment"));
+                    report.put("overallScore", rs.getString("overallScore"));
+                    report.put("result", rs.getString("result"));
+                    report.put("totalElements", rs.getLong("totalElements"));
 
                     return report;
                 },
+                organizationId,
+                factoryId,
+                factoryId,
                 size,
                 offset
         );
 
         /*
-         * COUNT(*) OVER() returns the total number of report rows
-         * before pagination, provided the requested page has rows.
+         * COUNT(*) OVER() provides the total count when the requested
+         * page contains rows.
          */
         long totalElements = rows.isEmpty()
                 ? 0L
-                : ((Number) rows.get(0).get("totalElements"))
-                        .longValue();
+                : ((Number) rows.get(0).get("totalElements")).longValue();
 
-        // Remove the internal count field from each report row.
         List<Map<String, Object>> content = new ArrayList<>();
 
         for (Map<String, Object> row : rows) {
-            Map<String, Object> report =
-                    new LinkedHashMap<>(row);
-
+            Map<String, Object> report = new LinkedHashMap<>(row);
             report.remove("totalElements");
             content.add(report);
         }

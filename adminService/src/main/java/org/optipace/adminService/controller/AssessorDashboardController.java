@@ -28,14 +28,24 @@ public class AssessorDashboardController {
      * - Average Score
      * - Employee Assessment Details
      */
-    @GetMapping
-    @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'FACTORY_ADMIN', 'ASSESSOR')")
-    public ResponseEntity<SingleResponse<Map<String, Object>>> getDashboard() {
 
-        log.info("REST request to get assessor dashboard");
+@GetMapping
+@PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'FACTORY_ADMIN', 'ASSESSOR')")
+public ResponseEntity<SingleResponse<Map<String, Object>>> getDashboard(
+        @RequestParam Long organizationId,
+        @RequestParam(required = false) Long factoryId,
+        @RequestParam(defaultValue = "0") int page,
+        @RequestParam(defaultValue = "10") int size) {
 
-        return ResponseEntity.ok(
-                assessorDashboardService.getAssessorDashboard()
-        );
+    if (page < 0 || size <= 0) {
+        throw new IllegalArgumentException(
+                "Page must be >= 0 and size must be > 0");
     }
+
+    return ResponseEntity.ok(
+            assessorDashboardService.getAssessorDashboard(
+                    organizationId, factoryId, page, size)
+    );
+}
+
 }
