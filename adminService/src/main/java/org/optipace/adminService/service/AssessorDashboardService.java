@@ -6,6 +6,11 @@ import java.util.Map;
 
 public interface AssessorDashboardService {
 
-    SingleResponse<Map<String, Object>> getAssessorDashboard();
+    SingleResponse<Map<String, Object>> getAssessorDashboard(
+            Long organizationId,
+            Long factoryId,
+            int page,
+            int size
+    );
 
 }

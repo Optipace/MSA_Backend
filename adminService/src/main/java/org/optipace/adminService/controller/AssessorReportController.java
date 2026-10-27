@@ -22,23 +22,30 @@ public class AssessorReportController {
     private final AssessorReportService assessorReportService;
 
     /**
-     * GET /assessor/report?page=0&size=10
-     *
-     * Returns paginated employee assessment reports.
+     * GET /assessor/report?organizationId=1&page=0&size=10
+     * GET /assessor/report?organizationId=1&factoryId=2&page=0&size=10
      */
     @GetMapping
     @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'FACTORY_ADMIN', 'ASSESSOR')")
     public ResponseEntity<SingleResponse<Map<String, Object>>>
             getAssessorReport(
+                    @RequestParam Long organizationId,
+                    @RequestParam(required = false) Long factoryId,
                     @RequestParam(defaultValue = "0") int page,
                     @RequestParam(defaultValue = "10") int size) {
 
         log.info(
-                "REST request to get assessor report: page={}, size={}",
-                page, size);
+                "REST request for assessor report: organizationId={}, factoryId={}, page={}, size={}",
+                organizationId, factoryId, page, size
+        );
 
         return ResponseEntity.ok(
-                assessorReportService.getAssessorReport(page, size)
+                assessorReportService.getAssessorReport(
+                        organizationId,
+                        factoryId,
+                        page,
+                        size
+                )
         );
     }
 }

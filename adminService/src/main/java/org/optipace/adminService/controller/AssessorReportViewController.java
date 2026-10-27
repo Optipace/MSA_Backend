@@ -14,7 +14,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/assessor/reportview")
-@CrossOrigin(origins = "*") // Adjust CORS origins as required
 public class AssessorReportViewController {
 
     @Autowired

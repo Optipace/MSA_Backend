@@ -19,11 +19,24 @@ public class AssessorReportServiceImpl implements AssessorReportService {
 
     @Override
     public SingleResponse<Map<String, Object>> getAssessorReport(
-            int page, int size) {
+            Long organizationId,
+            Long factoryId,
+            int page,
+            int size) {
+
+        if (organizationId == null || organizationId <= 0) {
+            throw new IllegalArgumentException(
+                    "Organization ID must be greater than zero");
+        }
+
+        if (factoryId != null && factoryId <= 0) {
+            throw new IllegalArgumentException(
+                    "Factory ID must be greater than zero");
+        }
 
         if (page < 0) {
             throw new IllegalArgumentException(
-                    "Page must be greater than or equal to 0");
+                    "Page must be greater than or equal to zero");
         }
 
         if (size < 1 || size > 100) {
@@ -32,11 +45,17 @@ public class AssessorReportServiceImpl implements AssessorReportService {
         }
 
         log.debug(
-                "Fetching assessor report: page={}, size={}",
-                page, size);
+                "Fetching assessor report: organizationId={}, factoryId={}, page={}, size={}",
+                organizationId, factoryId, page, size
+        );
 
         Map<String, Object> report =
-                assessorReportRepository.getAssessorReport(page, size);
+                assessorReportRepository.getAssessorReport(
+                        organizationId,
+                        factoryId,
+                        page,
+                        size
+                );
 
         return new SingleResponse<>(
                 report,
