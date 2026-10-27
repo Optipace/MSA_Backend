@@ -39,10 +39,14 @@ public class PointsServiceImpl implements PointsService {
     // ⭐ AVAILABLE POINTS (excludes expired)
     // =====================================================
     @Override
-    public SingleResponse<Map<String, Object>> getAvailablePoints(Long organizationId) {
+    public SingleResponse<Map<String, Object>> getAvailablePoints(Long factoryAdminId) {
         
         LocalDate today = LocalDate.now();
         
+        // Assuming you have an employeeRepository and the Employee entity has getOrganizationId()
+        Long organizationId = organizationRepository.findOrganizationIdByEmployeeId(factoryAdminId);
+        
+        log.info("organizationId {}  (ref: {}:{})",organizationId);
         // ⭐ 1. Fetch Organization Name
         String organizationName = organizationRepository.findById(organizationId)
                 .map(Organization::getOrganizationName)

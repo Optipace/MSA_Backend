@@ -535,7 +535,7 @@ public class EmployeeServiceImpl implements EmployeeService {
 			loginDto.setEmployeeId(saved.getEmployeeId());
 			loginDto.setUsername(saved.getEmail());
 			loginDto.setPlainTextPassword(plainPassword);
-
+		
 			// ⭐ Set the default Role ID (2L = FACTORY_ADMIN based on your screenshot)
 			loginDto.setRoleId(2L);
 
@@ -579,7 +579,7 @@ public class EmployeeServiceImpl implements EmployeeService {
 		employee.setShift(shiftRepository.getReferenceById(1L));
 		employee.setDesignation(designationRepository.getReferenceById(1L)); // ⭐ Failing here
 		employee.setSection(sectionRepository.getReferenceById(1L));
-		
+		employee.setCreatedBy(Long.parseLong(adminId));
 		return employeeRepository.saveAndFlush(employee);
 	}
 

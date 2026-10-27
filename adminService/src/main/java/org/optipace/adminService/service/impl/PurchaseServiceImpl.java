@@ -46,7 +46,8 @@ public class PurchaseServiceImpl implements PurchaseService {
     private final SubscriptionPackageRepository subscriptionPackageRepository;
     private final PointTransactionRepository pointTransactionRepository;
     private final OrganizationPointsRepository organizationPointsRepository;
-    
+    private final OrganizationRepository organizationRepository;
+
     private final RazorpayOrderService razorpayOrderService;
 
     // =====================================================
@@ -533,9 +534,12 @@ public class PurchaseServiceImpl implements PurchaseService {
  // =====================================================
  @Override
  @Transactional(readOnly = true)
- public SingleResponse<List<BillingHistoryResponse>> getBillingHistory(Long organizationId) {
+ public SingleResponse<List<BillingHistoryResponse>> getBillingHistory(Long factoryAdminId) {
      
-     log.info("Fetching billing history for organization: {}", organizationId);
+     log.info("Fetching billing history for organization: {}", factoryAdminId);
+  // Assuming you have an employeeRepository and the Employee entity has getOrganizationId()
+     Long organizationId = organizationRepository.findOrganizationIdByEmployeeId(factoryAdminId);
+     
      
      // 1. Fetch all payments for the org, newest first
      List<Payment> payments = paymentRepository.findByOrganizationIdOrderByPaymentDateDesc(organizationId);

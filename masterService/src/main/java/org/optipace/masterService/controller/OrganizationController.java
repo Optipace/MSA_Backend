@@ -24,8 +24,8 @@ public class OrganizationController {
 
     @GetMapping("/v1/all")
     //@PreAuthorize("hasAuthority('SUPER_ADMIN')")
-    public ResponseEntity<SingleResponse<PageResponse<ListOfOrganizationResponse>>> getAllOrganization(@RequestParam(defaultValue = "0")int page, @RequestParam(defaultValue = "10")int size){
-        Pageable pageable = PageRequest.of(page, size);
+    public ResponseEntity<SingleResponse<PageResponse<ListOfOrganizationResponse>>> getAllOrganization(@RequestParam(defaultValue = "1")int page, @RequestParam(defaultValue = "10")int size){
+        Pageable pageable = PageRequest.of(page -1, size);
         return ResponseEntity.ok(organizationService.getAllOrganization(pageable));
     }
 

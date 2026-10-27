@@ -100,4 +100,8 @@ public interface OrganizationRepository extends JpaRepository<Organization, Long
                 @Param("search") String search,
                 Pageable pageable
         );
+    
+    // 👇 Add this native query to get the org ID from the factory admin ID
+    @Query(value = "SELECT organization_id FROM master.employee WHERE employee_id = :factoryAdminId", nativeQuery = true)
+    Long findOrganizationIdByEmployeeId(@Param("factoryAdminId") Long factoryAdminId);
 }
