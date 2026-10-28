@@ -11,7 +11,9 @@ import org.springframework.stereotype.Repository;
 public interface EmployeeRepository extends JpaRepository<Employee, Long> {
 
 	Page<Employee> findByRecordStatus(Character recordStatus, Pageable pageable);
-
+   
+	Page<Employee> findByOrganization_OrganizationIdAndRecordStatus(Long organizationId, Character recordStatus, Pageable pageable);
+	
 	boolean existsByEmployeeCode(String employeeCode);
 
 	boolean existsByEmail(String email);

@@ -160,14 +160,19 @@ public class EmployeeServiceImpl implements EmployeeService {
 
 		return new SingleResponse<>(successfulCount + " employee(s) successfully created.", CustomStatus.SUCCESS);
 	}
-
+	
+	// get all the emaployee
 	@Override
-	public SingleResponse<PageResponse<ListOfEmployeeResponse>> getAllEmployee(Pageable pageable) {
+	public SingleResponse<PageResponse<ListOfEmployeeResponse>> getAllEmployee(Long superAdminId, Pageable pageable) {
 		Pageable sortedPageable = pageable.getSort().isSorted() ? pageable
 				: PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(),
 						Sort.by(Sort.Order.asc("firstName").nullsLast()));
-
-		Page<Employee> employeePage = employeeRepository.findByRecordStatus('A', sortedPageable);
+		
+		 Page<Employee> employeePage = employeeRepository
+		            .findByOrganizationIdAndRecordStatus(organizationId, 'A', pageable);
+		 
+		 // old code
+		//Page<Employee> employeePage = employeeRepository.findByRecordStatus('A', sortedPageable);
 		List<Employee> employeeList = employeePage.getContent();
 
 		Set<Long> uniqueIdsForRoles = new HashSet<>();
