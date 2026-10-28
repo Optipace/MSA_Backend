@@ -1,3 +1,4 @@
+
 package org.optipace.adminService.controller;
 
 import lombok.RequiredArgsConstructor;
@@ -19,33 +20,25 @@ public class AssessorDashboardController {
     private final AssessorDashboardService assessorDashboardService;
 
     /**
-     * GET /assessor/dashboard
+     * GET /assessor/dashboard?page=0&size=10
      *
      * Returns:
-     * - Total Employees
-     * - Assessment Completed
-     * - Assessment Pending
-     * - Average Score
-     * - Employee Assessment Details
+     * - Dashboard summary
+     * - Paginated employee assessment details
      */
+    @GetMapping
+    @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'FACTORY_ADMIN', 'ASSESSOR')")
+    public ResponseEntity<SingleResponse<Map<String, Object>>> getDashboard(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
 
-@GetMapping
-@PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'FACTORY_ADMIN', 'ASSESSOR')")
-public ResponseEntity<SingleResponse<Map<String, Object>>> getDashboard(
-        @RequestParam Long organizationId,
-        @RequestParam(required = false) Long factoryId,
-        @RequestParam(defaultValue = "0") int page,
-        @RequestParam(defaultValue = "10") int size) {
+        log.info(
+                "REST request to get assessor dashboard: page={}, size={}",
+                page, size
+        );
 
-    if (page < 0 || size <= 0) {
-        throw new IllegalArgumentException(
-                "Page must be >= 0 and size must be > 0");
+        return ResponseEntity.ok(
+                assessorDashboardService.getAssessorDashboard(page, size)
+        );
     }
-
-    return ResponseEntity.ok(
-            assessorDashboardService.getAssessorDashboard(
-                    organizationId, factoryId, page, size)
-    );
-}
-
 }
