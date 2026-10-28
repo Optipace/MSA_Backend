@@ -37,7 +37,7 @@ public class FactoryAccessRepositoryImpl
             JOIN security.employee_role er
                 ON er.employee_id = e.employee_id
             WHERE e.employee_id = :employeeId
-              AND er.role_id = 2
+              AND er.role_id IN (1,2,3,4,5,6)
               AND er.effective_from <= CURRENT_DATE
               AND (
                     er.effective_to IS NULL

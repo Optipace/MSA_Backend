@@ -1,3 +1,4 @@
+
 package org.optipace.adminService.controller;
 
 import lombok.RequiredArgsConstructor;
@@ -22,30 +23,25 @@ public class AssessorReportController {
     private final AssessorReportService assessorReportService;
 
     /**
-     * GET /assessor/report?organizationId=1&page=0&size=10
-     * GET /assessor/report?organizationId=1&factoryId=2&page=0&size=10
+     * GET /assessor/report?page=0&size=10
+     *
+     * Returns assessor report based on the logged-in user's
+     * organization and factory access.
      */
     @GetMapping
     @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'FACTORY_ADMIN', 'ASSESSOR')")
     public ResponseEntity<SingleResponse<Map<String, Object>>>
             getAssessorReport(
-                    @RequestParam Long organizationId,
-                    @RequestParam(required = false) Long factoryId,
                     @RequestParam(defaultValue = "0") int page,
                     @RequestParam(defaultValue = "10") int size) {
 
         log.info(
-                "REST request for assessor report: organizationId={}, factoryId={}, page={}, size={}",
-                organizationId, factoryId, page, size
+                "REST request for assessor report: page={}, size={}",
+                page, size
         );
 
         return ResponseEntity.ok(
-                assessorReportService.getAssessorReport(
-                        organizationId,
-                        factoryId,
-                        page,
-                        size
-                )
+                assessorReportService.getAssessorReport(page, size)
         );
     }
 }
