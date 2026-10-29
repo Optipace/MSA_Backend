@@ -539,8 +539,8 @@ public class AssessmentService {
         newSession.setEmployeeId(oldSession.getEmployeeId());
 
         // A new garment must be scanned for this new session
-        newSession.setGarmentInstanceId(null);
-
+        newSession.setBatchId(null);
+        newSession.setGarmentId(null);
         newSession.setAssessmentTemplateId(
                 oldSession.getAssessmentTemplateId());
         newSession.setAssessmentCycleId(

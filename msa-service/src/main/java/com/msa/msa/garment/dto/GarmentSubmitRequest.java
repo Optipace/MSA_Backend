@@ -1,3 +1,4 @@
+
 package com.msa.msa.garment.dto;
 
 import lombok.Getter;
@@ -11,10 +12,17 @@ import java.util.UUID;
 public class GarmentSubmitRequest {
 
     private UUID assessmentSessionId;
-
     private UUID assessmentModuleInstanceId;
+    private Long batchId;
 
-    private UUID garmentInstanceId;
+    private List<GarmentSubmission> garments;
 
-    private List<GarmentSelection> selections;
+    @Getter
+    @Setter
+    public static class GarmentSubmission {
+
+        private String garmentId;
+        private List<GarmentSelection> selections;
+    }
 }
+

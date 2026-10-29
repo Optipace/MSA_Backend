@@ -1,3 +1,4 @@
+
 package com.msa.msa.garment.entity;
 
 import jakarta.persistence.*;
@@ -22,8 +23,11 @@ public class GarmentIdentificationResponse {
     @Column(name = "assessment_response_id", nullable = false)
     private UUID assessmentResponseId;
 
-    @Column(name = "garment_instance_id", nullable = false)
-    private UUID garmentInstanceId;
+    @Column(name = "batch_id", nullable = false)
+    private Long batchId;
+
+    @Column(name = "garment_id", nullable = false, length = 100)
+    private String garmentId;
 
     @Column(name = "selected_defect_id", nullable = false)
     private Long selectedDefectId;
@@ -31,8 +35,8 @@ public class GarmentIdentificationResponse {
     @Column(name = "selected_garment_area_id", nullable = false)
     private Long selectedGarmentAreaId;
 
-    @Column(name = "expected_defect_id")
-    private UUID expectedDefectId;
+    @Column(name = "expected_submission_detail_id")
+    private Long expectedSubmissionDetailId;
 
     @Column(name = "defect_correct")
     private Boolean defectCorrect;

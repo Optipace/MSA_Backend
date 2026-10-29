@@ -47,6 +47,9 @@ public class AssessorDashboardServiceImpl
 
         FactoryScope scope =
                 factoryContextService.getCurrentFactoryScope();
+        
+        log.info("organisationId=" + scope.organisationId(), " factoryId="+scope.factoryId());
+
 
         Map<String, Object> result =
                 assessorDashboardRepository.getAssessorDashboard(
@@ -55,6 +58,7 @@ public class AssessorDashboardServiceImpl
                         page,
                         size
                 );
+        
 
         return new SingleResponse<>(
                 result,

@@ -1,3 +1,4 @@
+
 package com.msa.msa.garment.dto;
 
 import lombok.Getter;
@@ -14,4 +15,6 @@ public class GarmentValidateRequest {
     private UUID assessmentModuleInstanceId;
 
     private Long batchId;
+
+    //private String garmentId;
 }

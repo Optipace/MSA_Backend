@@ -1,4 +1,3 @@
-
 package org.optipace.garmentService.repository;
 
 import java.util.List;
@@ -19,7 +18,16 @@ public interface GarmentDefectAreaSubmissionRepository
             Long batchId,
             String garmentId);
 
+    List<GarmentDefectAreaSubmission>
+            findByBatchIdAndGarmentIdIgnoreCase(
+                    Long batchId,
+                    String garmentId);
+
     boolean existsByBatchIdAndGarmentId(
+            Long batchId,
+            String garmentId);
+
+    boolean existsByBatchIdAndGarmentIdIgnoreCase(
             Long batchId,
             String garmentId);
 
@@ -27,7 +35,7 @@ public interface GarmentDefectAreaSubmissionRepository
         SELECT COUNT(s) > 0
         FROM GarmentDefectAreaSubmission s
         WHERE s.batchId = :batchId
-          AND s.garmentId = :garmentId
+          AND LOWER(s.garmentId) = LOWER(:garmentId)
           AND (
               s.defectId = :defectId
               OR (s.defectId IS NULL AND :defectId IS NULL)
