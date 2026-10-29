@@ -30,8 +30,12 @@ public class AssessmentSession {
     @Column(name = "employee_id")
     private Long employeeId;
 
-    @Column(name = "garment_instance_id")
-    private UUID garmentInstanceId;
+ // New garment identification fields
+    @Column(name = "batch_id")
+    private Long batchId;
+
+    @Column(name = "garment_id", length = 100)
+    private String garmentId;
 
     @Column(name = "assessment_template_id")
     private Long assessmentTemplateId;

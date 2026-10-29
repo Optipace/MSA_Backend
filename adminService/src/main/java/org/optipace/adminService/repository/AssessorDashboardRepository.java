@@ -1,4 +1,3 @@
-
 package org.optipace.adminService.repository;
 
 import lombok.RequiredArgsConstructor;
@@ -33,13 +32,20 @@ public class AssessorDashboardRepository {
 
         Map<String, Object> response = new LinkedHashMap<>();
 
-        // Dashboard summary query
+        /*
+         * 1. Dashboard summary
+         *
+         * Counts completed and pending module instances.
+         * Applies organization and factory filters.
+         */
         String summarySql = """
             SELECT
                 (
                     SELECT COUNT(*)
                     FROM master.employee e
                     WHERE e.record_status = 'A'
+                      AND (? IS NULL OR e.organization_id = ?)
+                      AND (? IS NULL OR e.factory_id = ?)
                 ) AS "totalEmployees",
 
                 (
@@ -55,6 +61,8 @@ public class AssessorDashboardRepository {
                         ON e.employee_id = s.employee_id
                     WHERE ami.module_status_id = 4
                       AND e.record_status = 'A'
+                      AND (? IS NULL OR e.organization_id = ?)
+                      AND (? IS NULL OR e.factory_id = ?)
                 ) AS "assessmentCompleted",
 
                 (
@@ -70,6 +78,8 @@ public class AssessorDashboardRepository {
                         ON e.employee_id = s.employee_id
                     WHERE ami.module_status_id = 2
                       AND e.record_status = 'A'
+                      AND (? IS NULL OR e.organization_id = ?)
+                      AND (? IS NULL OR e.factory_id = ?)
                 ) AS "assessmentPending",
 
                 (
@@ -85,24 +95,40 @@ public class AssessorDashboardRepository {
                         ON e.employee_id = s.employee_id
                     WHERE ami.module_status_id = 4
                       AND e.record_status = 'A'
+                      AND (? IS NULL OR e.organization_id = ?)
+                      AND (? IS NULL OR e.factory_id = ?)
                 ) AS "averageScore"
             """;
 
-        Map<String, Object> summary =
-                jdbcTemplate.queryForMap(summarySql);
+        Map<String, Object> summary = jdbcTemplate.queryForMap(
+                summarySql,
+                organisationId, organisationId,
+                factoryId, factoryId,
+                organisationId, organisationId,
+                factoryId, factoryId,
+                organisationId, organisationId,
+                factoryId, factoryId,
+                organisationId, organisationId,
+                factoryId, factoryId
+        );
 
         response.put("summary", summary);
 
-        // Employee query: include all active employees,
-        // even when no assessment session exists.
+        /*
+         * 2. Employee list
+         *
+         * Includes active employees even if they have no assessment.
+         * Selects the latest assessment session for each employee.
+         */
         String employeeSql = """
             SELECT
                 CONCAT_WS(
                     ' ',
-                    e.first_name,
-                    e.middle_name,
-                    e.last_name
+                    NULLIF(TRIM(e.first_name), ''),
+                    NULLIF(TRIM(e.middle_name), ''),
+                    NULLIF(TRIM(e.last_name), '')
                 ) AS "name",
+
                 e.employee_id AS "empId",
                 e.employee_code AS "empCode",
                 s.assessment_template_id AS "assessmentTemplateId",
@@ -110,62 +136,98 @@ public class AssessorDashboardRepository {
                 f.factory_name AS "factory",
                 CAST(s.assigned_on AS DATE) AS "date",
                 COALESCE(ast.status_name, 'Not Assigned') AS "status"
+
             FROM master.employee e
-            LEFT JOIN assessment.assessment_session s
-                ON s.employee_id = e.employee_id
+
+            LEFT JOIN LATERAL (
+                SELECT
+                    s1.assessment_template_id,
+                    s1.assigned_on,
+                    s1.assessment_status_id
+                FROM assessment.assessment_session s1
+                WHERE s1.employee_id = e.employee_id
+                ORDER BY
+                    s1.assigned_on DESC NULLS LAST,
+                    s1.assessment_session_id DESC
+                LIMIT 1
+            ) s ON TRUE
+
             LEFT JOIN master.department d
                 ON d.department_id = e.department_id
+
             LEFT JOIN master.factory f
                 ON f.factory_id = e.factory_id
+
             LEFT JOIN assessment.assessment_status ast
-                ON ast.assessment_status_id =
-                   s.assessment_status_id
+                ON ast.assessment_status_id = s.assessment_status_id
+
             WHERE e.record_status = 'A'
+              AND (? IS NULL OR e.organization_id = ?)
+              AND (? IS NULL OR e.factory_id = ?)
+
             ORDER BY
                 s.assigned_on DESC NULLS LAST,
                 e.employee_id
             """;
 
-        // Apply pagination
+        /*
+         * 3. Apply pagination
+         */
         String paginatedEmployeeSql = employeeSql + """
-        	    LIMIT ? OFFSET ?
-        	    """;
+            LIMIT ? OFFSET ?
+            """;
 
-        	List<Map<String, Object>> employees =
-        	        jdbcTemplate.queryForList(
-        	                paginatedEmployeeSql,
-        	                size,
-        	                (long) page * size
-        	        );
+        List<Map<String, Object>> employees =
+                jdbcTemplate.queryForList(
+                        paginatedEmployeeSql,
+                        organisationId, organisationId,
+                        factoryId, factoryId,
+                        size,
+                        (long) page * size
+                );
 
-        	// Count all active employees for pagination metadata
-        	String countSql = """
-        	    SELECT COUNT(*)
-        	    FROM master.employee e
-        	    WHERE e.record_status = 'A'
-        	    """;
+        /*
+         * 4. Count employees matching the same filters
+         */
+        String countSql = """
+            SELECT COUNT(*)
+            FROM master.employee e
+            WHERE e.record_status = 'A'
+              AND (? IS NULL OR e.organization_id = ?)
+              AND (? IS NULL OR e.factory_id = ?)
+            """;
 
-        	Long totalElements = jdbcTemplate.queryForObject(
-        	        countSql,
-        	        Long.class
-        	);
+        Long totalElements = jdbcTemplate.queryForObject(
+                countSql,
+                Long.class,
+                organisationId, organisationId,
+                factoryId, factoryId
+        );
 
-        	long total = totalElements != null ? totalElements : 0L;
-        	int totalPages = (int) Math.ceil((double) total / size);
+        long total = totalElements != null ? totalElements : 0L;
 
-        	Map<String, Object> employeePage = new LinkedHashMap<>();
-        	employeePage.put("content", employees);
-        	employeePage.put("page", page);
-        	employeePage.put("size", size);
-        	employeePage.put("totalElements", total);
-        	employeePage.put("totalPages", totalPages);
-        	employeePage.put("first", page == 0);
-        	employeePage.put("last", page >= totalPages - 1);
-        	employeePage.put("numberOfElements", employees.size());
-        	employeePage.put("empty", employees.isEmpty());
+        int totalPages = (int) Math.ceil((double) total / size);
 
-        	response.put("employees", employeePage);
+        /*
+         * 5. Build pagination response
+         */
+        Map<String, Object> employeePage = new LinkedHashMap<>();
 
-        	return response;
+        employeePage.put("content", employees);
+        employeePage.put("page", page);
+        employeePage.put("size", size);
+        employeePage.put("totalElements", total);
+        employeePage.put("totalPages", totalPages);
+        employeePage.put("first", page == 0);
+        employeePage.put(
+                "last",
+                totalPages == 0 || page >= totalPages - 1
+        );
+        employeePage.put("numberOfElements", employees.size());
+        employeePage.put("empty", employees.isEmpty());
+
+        response.put("employees", employeePage);
+
+        return response;
     }
 }
