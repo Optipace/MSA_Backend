@@ -162,17 +162,29 @@ public class EmployeeServiceImpl implements EmployeeService {
 	}
 	
 	// get all the emaployee
-	@Override
-	public SingleResponse<PageResponse<ListOfEmployeeResponse>> getAllEmployee(Long superAdminId, Pageable pageable) {
-		Pageable sortedPageable = pageable.getSort().isSorted() ? pageable
-				: PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(),
-						Sort.by(Sort.Order.asc("firstName").nullsLast()));
+	
+	//@Override
+	public SingleResponse<PageResponse<ListOfEmployeeResponse>> getAllEmployee(Pageable pageable) {
 		
-		 Page<Employee> employeePage = employeeRepository
-		            .findByOrganizationIdAndRecordStatus(organizationId, 'A', pageable);
+		
+		  Pageable sortedPageable = pageable.getSort().isSorted() ? pageable :
+		  PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(),
+		  Sort.by(Sort.Order.asc("firstName").nullsLast()));
 		 
+		//log.warn("method call getAllEmployee", superAdminId);
+
+	    
+		/*
+		 * Long organizationId =
+		 * organizationRepository.findOrganizationIdByEmployeeId(superAdminId);
+		 * 
+		 * Page<Employee> employeePage = organizationRepository
+		 * .findByOrganizationIdAndRecordStatus(organizationId, 'A', pageable);
+		 */
+	   
+	      //  System.out.println(employeePage);
 		 // old code
-		//Page<Employee> employeePage = employeeRepository.findByRecordStatus('A', sortedPageable);
+		Page<Employee> employeePage = employeeRepository.findByRecordStatus('A', sortedPageable);
 		List<Employee> employeeList = employeePage.getContent();
 
 		Set<Long> uniqueIdsForRoles = new HashSet<>();
@@ -237,7 +249,7 @@ public class EmployeeServiceImpl implements EmployeeService {
 				employeePage.getTotalPages(), employeePage.isLast());
 
 		return new SingleResponse<>(pageResponse, CustomStatus.SUCCESS);
-	}
+	} 
 
 	@Override
 	@Transactional
@@ -655,6 +667,9 @@ public class EmployeeServiceImpl implements EmployeeService {
 
 	    return new SingleResponse<>(updated.getEmployeeId(), CustomStatus.SUCCESS);
 	}
+
+	
+	
 
 //    @Async
 //    private void sendWelcomeEmail(String toEmail, String name, String code, String password) {

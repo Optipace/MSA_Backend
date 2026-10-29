@@ -18,7 +18,7 @@ public interface EmployeeService {
 
     SingleResponse<?> createEmployee(List<AddEmployeeRequest> requestList, String adminId);
 
-    SingleResponse<PageResponse<ListOfEmployeeResponse>> getAllEmployee(Pageable pageable);
+   SingleResponse<PageResponse<ListOfEmployeeResponse>> getAllEmployee(Pageable pageable);
 
     SingleResponse<?> updateEmployee(Long employeeId, UpdateEmployeeDetailsRequest request, String adminId);
 
@@ -35,5 +35,7 @@ public interface EmployeeService {
     SingleResponse<?> addAdmin(AddAdminRequest request, String adminId);
 
     SingleResponse<?> updateAdmin(Long employeeId, AddAdminRequest request);
+    
+   // SingleResponse<PageResponse<ListOfEmployeeResponse>> getAllEmployee(Long organizationId, Pageable pageable);
 
 }

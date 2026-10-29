@@ -12,6 +12,7 @@ import org.optipace.masterService.dto.response.*;
 import org.optipace.masterService.service.EmployeeService;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -66,10 +67,12 @@ public class EmployeeController {
 		return ResponseEntity.ok(employeeService.createEmployee(requestList, adminId));
 	}
 
+	// old method
+
 	@GetMapping("/v1/all")
 	@PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'FACTORY_ADMIN')")
 	public ResponseEntity<SingleResponse<PageResponse<ListOfEmployeeResponse>>> getAllEmployee(
-			@RequestParam Long superAdminId, @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "10") int size) {
+			@RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "10") int size) {
 		Pageable pageable = PageRequest.of(page, size);
 		return ResponseEntity.ok(employeeService.getAllEmployee(pageable));
 	}

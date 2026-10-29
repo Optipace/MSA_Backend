@@ -6,6 +6,7 @@ import org.optipace.adminService.dto.response.OrganizationUsageResponse;
 import org.optipace.adminService.dto.response.OrgAdminCountResponse;
 import org.optipace.adminService.dto.response.OrganizationOverviewReportResponse;
 import org.optipace.adminService.dto.response.OrganizationOverviewResponse;
+import org.optipace.adminService.entity.Employee;
 import org.optipace.adminService.entity.Organization;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -104,4 +105,6 @@ public interface OrganizationRepository extends JpaRepository<Organization, Long
     // 👇 Add this native query to get the org ID from the factory admin ID
     @Query(value = "SELECT organization_id FROM master.employee WHERE employee_id = :factoryAdminId", nativeQuery = true)
     Long findOrganizationIdByEmployeeId(@Param("factoryAdminId") Long factoryAdminId);
+
+   // Page<Employee> findByOrganizationIdAndRecordStatus(Long organizationId, Character recordStatus, Pageable pageable);
 }

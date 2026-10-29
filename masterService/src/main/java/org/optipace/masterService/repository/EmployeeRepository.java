@@ -12,7 +12,8 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
 
 	Page<Employee> findByRecordStatus(Character recordStatus, Pageable pageable);
    
-	Page<Employee> findByOrganization_OrganizationIdAndRecordStatus(Long organizationId, Character recordStatus, Pageable pageable);
+	//Page<Employee> findByOrganization_OrganizationIdAndRecordStatus(Long organizationId, Character recordStatus, Pageable pageable);
+	
 	
 	boolean existsByEmployeeCode(String employeeCode);
 
@@ -21,4 +22,7 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
 	boolean existsByMobileNumber(String mobileNumber); // ⭐ Add this
 
 	boolean existsByAadhaarNumber(String aadhaarNumber);
+	
+   // Page<Employee> findByOrganizationIdAndRecordStatus(Long organizationId, Character recordStatus, Pageable pageable);
+
 }
