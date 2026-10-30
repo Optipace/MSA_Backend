@@ -222,116 +222,116 @@ public class AssessmentService {
         return new IqSubmitResponse(moduleInstance.getAssessmentModuleInstanceId(), module.getModuleCode(), completionTimeSeconds, timeLimitSeconds, result, completedStatus.getStatusCode(), nextModuleCode);
     }
 
-    @Transactional
-    public CreateAssessmentResponse createAssessment(CreateAssessmentRequest request) {
-        // 1. Validate employee
-        Employee employee = employeeRepository.findById(request.getEmployeeId()).orElseThrow(() -> new RuntimeException("Employee not found"));
-        String status = employee.getRecordStatus();
-
-
-//        if (!"A".equals(employee.getRecordStatus())) {
+//    @Transactional
+//    public CreateAssessmentResponse createAssessment(CreateAssessmentRequest request) {
+//        // 1. Validate employee
+//        Employee employee = employeeRepository.findById(request.getEmployeeId()).orElseThrow(() -> new RuntimeException("Employee not found"));
+//        String status = employee.getRecordStatus();
+//
+//
+////        if (!"A".equals(employee.getRecordStatus())) {
+////            throw new RuntimeException("Employee is not active");
+////        }
+//        if (employee.getRecordStatus() == null || !"A".equals(employee.getRecordStatus().trim())) {
 //            throw new RuntimeException("Employee is not active");
 //        }
-        if (employee.getRecordStatus() == null || !"A".equals(employee.getRecordStatus().trim())) {
-            throw new RuntimeException("Employee is not active");
-        }
-
-        // 2. Validate assessment template
-        AssessmentTemplate template = assessmentTemplateRepository.findById(request.getAssessmentTemplateId()).orElseThrow(() -> new RuntimeException("Assessment template not found"));
-
-        if (!"A".equals(template.getRecordStatus().trim())) {
-            throw new RuntimeException("Assessment template is not active");
-        }
-
-        // 3. Get configured modules
-        List<AssessmentTemplateModule> templateModules = assessmentTemplateModuleRepository.findByAssessmentTemplateIdOrderBySequenceNo(template.getAssessmentTemplateId());
-
-        if (templateModules.isEmpty()) {
-            throw new BadRequestException("No modules are configured for assessment template: " + request.getAssessmentTemplateId());
-        }
-
-        // 4. Current time
-        OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
-
-        // 5. Calculate validity
-        int validityDays = template.getValidityDays() != null ? template.getValidityDays() : 30;
-
-        OffsetDateTime validUntil = now.plusDays(validityDays);
-
-        // 6. Generate Test ID
-        String assessmentNo = generateAssessmentNumber();
-
-        // 7. Create assessment session
-        AssessmentSession session = new AssessmentSession();
-
-        session.setAssessmentNo(assessmentNo);
-        session.setEmployeeId(employee.getEmployeeId());
-        session.setAssessmentTemplateId(template.getAssessmentTemplateId());
-        session.setAssignedOn(now);
-        session.setAssessmentCycleId(template.getAssessmentCycleId());
-
-        AssessmentStatus assignedStatus = assessmentStatusRepository.findByStatusCode("ASSIGNED").orElseThrow(() -> new RuntimeException("ASSIGNED assessment status not configured"));
-
-        session.setAssessmentStatus(assignedStatus);
-        session.setCreatedOn(now);
-        session.setUpdatedOn(now);
-        session.setVersionNo(1);
-        session.setRecordStatus("A");
-        session.setAssignedBy(request.getEmployeeId());
-
-        assessmentSessionRepository.save(session);
-
-        // 8. Create first attempt
-        AssessmentAttempt attempt = new AssessmentAttempt();
-
-        attempt.setAssessmentSession(session);
-        attempt.setAttemptNo(1);
-        attempt.setCreatedOn(now);
-        attempt.setUpdatedOn(now);
-        attempt.setVersionNo(1);
-        attempt.setRecordStatus("A");
-
-        assessmentAttemptRepository.save(attempt);
-
-        // 9. Get module statuses
-        ModuleStatus lockedStatus = moduleStatusRepository.findByStatusCode("LOCKED").orElseThrow(() -> new RuntimeException("LOCKED module status not configured"));
-
-        ModuleStatus availableStatus = moduleStatusRepository.findByStatusCode("AVAILABLE").orElseThrow(() -> new RuntimeException("AVAILABLE module status not configured"));
-
-        for (AssessmentTemplateModule templateModule : templateModules) {
-
-            AssessmentModuleInstance moduleInstance = new AssessmentModuleInstance();
-
-            moduleInstance.setAssessmentModuleId(templateModule.getAssessmentModule().getAssessmentModuleId());
-
-            moduleInstance.setSequenceNo(templateModule.getSequenceNo());
-
-            /*
-             * Only the first sequence is available initially.
-             * All remaining sequences are locked.
-             */
-//            if (templateModule.getSequenceNo() == 1) {
-//                moduleInstance.setModuleStatus(
-//                        availableStatus
-//                );
-//            } else {
-//                moduleInstance.setModuleStatus(
-//                        lockedStatus
-//                );
-//            }
-            moduleInstance.setModuleStatus(availableStatus);
-            moduleInstance.setCreatedOn(now);
-            moduleInstance.setAssessmentAttempt(attempt);
-
-            assessmentModuleInstanceRepository.save(moduleInstance);
-        }
-
-        // 11. Employee name
-        String employeeName = buildEmployeeName(employee);
-
-        // 12. Return response
-        return new CreateAssessmentResponse(session.getAssessmentSessionId().toString(), session.getAssessmentNo(), session.getAssessmentStatus().getStatusCode(), validUntil, templateModules.get(0).getAssessmentModule().getModuleCode());
-    }
+//
+//        // 2. Validate assessment template
+//        AssessmentTemplate template = assessmentTemplateRepository.findById(request.getAssessmentTemplateId()).orElseThrow(() -> new RuntimeException("Assessment template not found"));
+//
+//        if (!"A".equals(template.getRecordStatus().trim())) {
+//            throw new RuntimeException("Assessment template is not active");
+//        }
+//
+//        // 3. Get configured modules
+//        List<AssessmentTemplateModule> templateModules = assessmentTemplateModuleRepository.findByAssessmentTemplateIdOrderBySequenceNo(template.getAssessmentTemplateId());
+//
+//        if (templateModules.isEmpty()) {
+//            throw new BadRequestException("No modules are configured for assessment template: " + request.getAssessmentTemplateId());
+//        }
+//
+//        // 4. Current time
+//        OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+//
+//        // 5. Calculate validity
+//        int validityDays = template.getValidityDays() != null ? template.getValidityDays() : 30;
+//
+//        OffsetDateTime validUntil = now.plusDays(validityDays);
+//
+//        // 6. Generate Test ID
+//        String assessmentNo = generateAssessmentNumber();
+//
+//        // 7. Create assessment session
+//        AssessmentSession session = new AssessmentSession();
+//
+//        session.setAssessmentNo(assessmentNo);
+//        session.setEmployeeId(employee.getEmployeeId());
+//        session.setAssessmentTemplateId(template.getAssessmentTemplateId());
+//        session.setAssignedOn(now);
+//        session.setAssessmentCycleId(template.getAssessmentCycleId());
+//
+//        AssessmentStatus assignedStatus = assessmentStatusRepository.findByStatusCode("ASSIGNED").orElseThrow(() -> new RuntimeException("ASSIGNED assessment status not configured"));
+//
+//        session.setAssessmentStatus(assignedStatus);
+//        session.setCreatedOn(now);
+//        session.setUpdatedOn(now);
+//        session.setVersionNo(1);
+//        session.setRecordStatus("A");
+//        session.setAssignedBy(request.getEmployeeId());
+//
+//        assessmentSessionRepository.save(session);
+//
+//        // 8. Create first attempt
+//        AssessmentAttempt attempt = new AssessmentAttempt();
+//
+//        attempt.setAssessmentSession(session);
+//        attempt.setAttemptNo(1);
+//        attempt.setCreatedOn(now);
+//        attempt.setUpdatedOn(now);
+//        attempt.setVersionNo(1);
+//        attempt.setRecordStatus("A");
+//
+//        assessmentAttemptRepository.save(attempt);
+//
+//        // 9. Get module statuses
+//        ModuleStatus lockedStatus = moduleStatusRepository.findByStatusCode("LOCKED").orElseThrow(() -> new RuntimeException("LOCKED module status not configured"));
+//
+//        ModuleStatus availableStatus = moduleStatusRepository.findByStatusCode("AVAILABLE").orElseThrow(() -> new RuntimeException("AVAILABLE module status not configured"));
+//
+//        for (AssessmentTemplateModule templateModule : templateModules) {
+//
+//            AssessmentModuleInstance moduleInstance = new AssessmentModuleInstance();
+//
+//            moduleInstance.setAssessmentModuleId(templateModule.getAssessmentModule().getAssessmentModuleId());
+//
+//            moduleInstance.setSequenceNo(templateModule.getSequenceNo());
+//
+//            /*
+//             * Only the first sequence is available initially.
+//             * All remaining sequences are locked.
+//             */
+////            if (templateModule.getSequenceNo() == 1) {
+////                moduleInstance.setModuleStatus(
+////                        availableStatus
+////                );
+////            } else {
+////                moduleInstance.setModuleStatus(
+////                        lockedStatus
+////                );
+////            }
+//            moduleInstance.setModuleStatus(availableStatus);
+//            moduleInstance.setCreatedOn(now);
+//            moduleInstance.setAssessmentAttempt(attempt);
+//
+//            assessmentModuleInstanceRepository.save(moduleInstance);
+//        }
+//
+//        // 11. Employee name
+//        String employeeName = buildEmployeeName(employee);
+//
+//        // 12. Return response
+//        return new CreateAssessmentResponse(session.getAssessmentSessionId().toString(), session.getAssessmentNo(), session.getAssessmentStatus().getStatusCode(), validUntil, templateModules.get(0).getAssessmentModule().getModuleCode());
+//    }
 
     private String generateAssessmentNumber() {
 
@@ -649,4 +649,193 @@ public class AssessmentService {
         );
     }
 
+    @Transactional
+    public CreateAssessmentResponse createAssessment(
+            CreateAssessmentRequest request) {
+
+        // 1. Validate employee
+        Employee employee = employeeRepository
+                .findById(request.getEmployeeId())
+                .orElseThrow(() ->
+                        new RuntimeException("Employee not found"));
+
+        if (employee.getRecordStatus() == null
+                || !"A".equalsIgnoreCase(
+                employee.getRecordStatus().trim())) {
+            throw new RuntimeException("Employee is not active");
+        }
+
+        // 2. Check for existing ASSIGNED or IN_PROGRESS session
+        List<AssessmentSession> existingSessions =
+                assessmentSessionRepository
+                        .findByEmployeeIdAndAssessmentStatus_StatusCodeInAndRecordStatusOrderByCreatedOnDesc(
+                                employee.getEmployeeId(),
+                                List.of("ASSIGNED", "IN_PROGRESS"),
+                                "A"
+                        );
+
+        // 3. Reuse the latest existing session if available
+        if (!existingSessions.isEmpty()) {
+
+            AssessmentSession existingSession = existingSessions.get(0);
+
+            AssessmentTemplate existingTemplate =
+                    assessmentTemplateRepository
+                            .findById(existingSession.getAssessmentTemplateId())
+                            .orElseThrow(() ->
+                                    new RuntimeException(
+                                            "Assessment template not found"));
+
+            List<AssessmentTemplateModule> existingTemplateModules =
+                    assessmentTemplateModuleRepository
+                            .findByAssessmentTemplateIdOrderBySequenceNo(
+                                    existingTemplate.getAssessmentTemplateId());
+
+            if (existingTemplateModules.isEmpty()) {
+                throw new BadRequestException(
+                        "No modules are configured for the existing assessment");
+            }
+
+            int validityDays =
+                    existingTemplate.getValidityDays() != null
+                            ? existingTemplate.getValidityDays()
+                            : 30;
+
+            OffsetDateTime validUntil =
+                    existingSession.getAssignedOn()
+                            .plusDays(validityDays);
+
+            // Return existing assessment without creating anything new
+            return new CreateAssessmentResponse(
+                    existingSession.getAssessmentSessionId().toString(),
+                    existingSession.getAssessmentNo(),
+                    existingSession.getAssessmentStatus().getStatusCode(),
+                    validUntil,
+                    existingTemplateModules.get(0)
+                            .getAssessmentModule()
+                            .getModuleCode()
+            );
+        }
+
+        // 4. Validate assessment template
+        AssessmentTemplate template =
+                assessmentTemplateRepository
+                        .findById(request.getAssessmentTemplateId())
+                        .orElseThrow(() ->
+                                new RuntimeException(
+                                        "Assessment template not found"));
+
+        if (template.getRecordStatus() == null
+                || !"A".equals(template.getRecordStatus().trim())) {
+            throw new RuntimeException(
+                    "Assessment template is not active");
+        }
+
+        // 5. Get configured modules
+        List<AssessmentTemplateModule> templateModules =
+                assessmentTemplateModuleRepository
+                        .findByAssessmentTemplateIdOrderBySequenceNo(
+                                template.getAssessmentTemplateId());
+
+        if (templateModules.isEmpty()) {
+            throw new BadRequestException(
+                    "No modules are configured for assessment template: "
+                            + request.getAssessmentTemplateId());
+        }
+
+        // 6. Current time
+        OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+
+        // 7. Calculate validity
+        int validityDays =
+                template.getValidityDays() != null
+                        ? template.getValidityDays()
+                        : 30;
+
+        OffsetDateTime validUntil = now.plusDays(validityDays);
+
+        // 8. Generate assessment number
+        String assessmentNo = generateAssessmentNumber();
+
+        // 9. Create assessment session
+        AssessmentSession session = new AssessmentSession();
+
+        session.setAssessmentNo(assessmentNo);
+        session.setEmployeeId(employee.getEmployeeId());
+        session.setAssessmentTemplateId(
+                template.getAssessmentTemplateId());
+        session.setAssignedOn(now);
+        session.setAssessmentCycleId(template.getAssessmentCycleId());
+
+        AssessmentStatus assignedStatus =
+                assessmentStatusRepository
+                        .findByStatusCode("ASSIGNED")
+                        .orElseThrow(() ->
+                                new RuntimeException(
+                                        "ASSIGNED assessment status not configured"));
+
+        session.setAssessmentStatus(assignedStatus);
+        session.setCreatedOn(now);
+        session.setUpdatedOn(now);
+        session.setVersionNo(1);
+        session.setRecordStatus("A");
+        session.setAssignedBy(request.getEmployeeId());
+
+        assessmentSessionRepository.save(session);
+
+        // 10. Create first attempt
+        AssessmentAttempt attempt = new AssessmentAttempt();
+
+        attempt.setAssessmentSession(session);
+        attempt.setAttemptNo(1);
+        attempt.setCreatedOn(now);
+        attempt.setUpdatedOn(now);
+        attempt.setVersionNo(1);
+        attempt.setRecordStatus("A");
+
+        assessmentAttemptRepository.save(attempt);
+
+        // 11. Get AVAILABLE module status
+        ModuleStatus availableStatus =
+                moduleStatusRepository
+                        .findByStatusCode("AVAILABLE")
+                        .orElseThrow(() ->
+                                new RuntimeException(
+                                        "AVAILABLE module status not configured"));
+
+        // 12. Create module instances
+        for (AssessmentTemplateModule templateModule : templateModules) {
+
+            AssessmentModuleInstance moduleInstance =
+                    new AssessmentModuleInstance();
+
+            moduleInstance.setAssessmentModuleId(
+                    templateModule.getAssessmentModule()
+                            .getAssessmentModuleId());
+
+            moduleInstance.setSequenceNo(
+                    templateModule.getSequenceNo());
+
+            // Preserve existing behavior: all modules are AVAILABLE
+            moduleInstance.setModuleStatus(availableStatus);
+            moduleInstance.setCreatedOn(now);
+            moduleInstance.setAssessmentAttempt(attempt);
+
+            assessmentModuleInstanceRepository.save(moduleInstance);
+        }
+
+        // 13. Employee name
+        String employeeName = buildEmployeeName(employee);
+
+        // 14. Return newly created assessment
+        return new CreateAssessmentResponse(
+                session.getAssessmentSessionId().toString(),
+                session.getAssessmentNo(),
+                session.getAssessmentStatus().getStatusCode(),
+                validUntil,
+                templateModules.get(0)
+                        .getAssessmentModule()
+                        .getModuleCode()
+        );
+    }
 }
