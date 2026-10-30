@@ -27,7 +27,7 @@ public class PurchaseController {
      */
     @PostMapping("/buy")
    //@PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'FACTORY_ADMIN')")
-    @PreAuthorize("hasAuthority('FACTORY_ADMIN')")
+   // @PreAuthorize("hasAuthority('FACTORY_ADMIN')")
     public ResponseEntity<SingleResponse<PurchaseResponse>> buyPackage(
             @Valid @RequestBody PurchaseRequestDto request,
             @RequestHeader("X-User-Id") String userId) {
@@ -39,10 +39,14 @@ public class PurchaseController {
         SingleResponse<PurchaseResponse> response = purchaseService.buyPackage(request, userId);
         
  
-        return new ResponseEntity<>(
-            purchaseService.buyPackage(request, userId),
-            HttpStatus.CREATED
-        );
+//        return new ResponseEntity<>(
+//            purchaseService.buyPackage(request, userId),
+//            HttpStatus.CREATED
+//        );
+        
+       
+        return new ResponseEntity<>(response, HttpStatus.CREATED);
+
     }
     
     /**
