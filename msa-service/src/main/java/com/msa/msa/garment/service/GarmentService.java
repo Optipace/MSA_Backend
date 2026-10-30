@@ -42,8 +42,7 @@ import jakarta.transaction.Transactional;
 @Service
 public class GarmentService {
 
-    private static final String DEFECT_MODULE_CODE = "DEFECT";
-
+    private static final String AREA_DEFECT_MODULE_CODE = "AREA_DEFECT";
     private static final String IN_PROGRESS = "IN_PROGRESS";
     private static final String COMPLETED = "COMPLETED";
     private static final String AVAILABLE = "AVAILABLE";
@@ -60,14 +59,23 @@ public class GarmentService {
             "AND LOWER(TRIM(garment_id)) = LOWER(TRIM(?)) " +
             "ORDER BY submission_detail_id";
 
+    private static final String BATCH_NAME_SQL =
+            "SELECT batch_name " +
+            "FROM garment.batch " +
+            "WHERE batch_id = ?";
+
     private static final String BATCH_CONFIGURATION_SQL =
             "SELECT " +
             "    s.garment_id, " +
+            "    gb.garment_name AS garment_name, " +
             "    s.defect_id, " +
             "    dm.defect_name, " +
             "    s.area_id, " +
             "    ga.area_name " +
             "FROM garment.garment_defect_area_submission s " +
+            "LEFT JOIN garment.garment_batch gb " +
+            "    ON gb.batch_id = s.batch_id " +
+            "   AND LOWER(TRIM(gb.garment_id)) = LOWER(TRIM(s.garment_id)) " +
             "LEFT JOIN garment.defect_master dm " +
             "    ON dm.defect_id = s.defect_id " +
             "LEFT JOIN garment.garment_area ga " +
@@ -78,37 +86,26 @@ public class GarmentService {
             "         ga.display_order NULLS LAST, " +
             "         s.submission_detail_id";
 
-    private final AssessmentModuleInstanceRepository
-            assessmentModuleInstanceRepository;
-
+    private final AssessmentModuleInstanceRepository assessmentModuleInstanceRepository;
     private final AssessmentModuleRepository assessmentModuleRepository;
-
     private final ModuleStatusRepository moduleStatusRepository;
-
     private final AssessmentResponseRepository assessmentResponseRepository;
-
-    private final GarmentIdentificationResponseRepository
-            garmentIdentificationResponseRepository;
-
+    private final GarmentIdentificationResponseRepository garmentIdentificationResponseRepository;
     private final JdbcTemplate jdbcTemplate;
 
     public GarmentService(
-            AssessmentModuleInstanceRepository
-                    assessmentModuleInstanceRepository,
+            AssessmentModuleInstanceRepository assessmentModuleInstanceRepository,
             AssessmentModuleRepository assessmentModuleRepository,
             ModuleStatusRepository moduleStatusRepository,
             AssessmentResponseRepository assessmentResponseRepository,
-            GarmentIdentificationResponseRepository
-                    garmentIdentificationResponseRepository,
+            GarmentIdentificationResponseRepository garmentIdentificationResponseRepository,
             JdbcTemplate jdbcTemplate) {
 
-        this.assessmentModuleInstanceRepository =
-                assessmentModuleInstanceRepository;
+        this.assessmentModuleInstanceRepository = assessmentModuleInstanceRepository;
         this.assessmentModuleRepository = assessmentModuleRepository;
         this.moduleStatusRepository = moduleStatusRepository;
         this.assessmentResponseRepository = assessmentResponseRepository;
-        this.garmentIdentificationResponseRepository =
-                garmentIdentificationResponseRepository;
+        this.garmentIdentificationResponseRepository = garmentIdentificationResponseRepository;
         this.jdbcTemplate = jdbcTemplate;
     }
 
@@ -117,26 +114,22 @@ public class GarmentService {
      * garments, defects and areas for the requested batch.
      */
     @Transactional
-    public GarmentValidateResponse validateGarment(
-            GarmentValidateRequest request) {
+    public GarmentValidateResponse validateGarment(GarmentValidateRequest request) {
 
         if (request == null) {
             throw new BadRequestException("Request cannot be null");
         }
 
         if (request.getAssessmentSessionId() == null) {
-            throw new BadRequestException(
-                    "Assessment session ID is required");
+            throw new BadRequestException("Assessment session ID is required");
         }
 
         if (request.getAssessmentModuleInstanceId() == null) {
-            throw new BadRequestException(
-                    "Assessment module instance ID is required");
+            throw new BadRequestException("Assessment module instance ID is required");
         }
 
         if (request.getBatchId() == null || request.getBatchId() <= 0) {
-            throw new BadRequestException(
-                    "Batch ID must be a positive number");
+            throw new BadRequestException("Batch ID must be a positive number");
         }
 
         AssessmentModuleInstance moduleInstance =
@@ -147,35 +140,50 @@ public class GarmentService {
         validateDefectModule(moduleInstance);
 
         AssessmentSession session =
-                moduleInstance.getAssessmentAttempt()
-                        .getAssessmentSession();
+                moduleInstance.getAssessmentAttempt().getAssessmentSession();
 
         GarmentValidateResponse.BatchGarmentsData batchData =
                 getBatchConfiguration(request.getBatchId());
 
         if (batchData.getGarments().isEmpty()) {
             throw new BadRequestException(
-                    "No garment configuration found for batch "
-                            + request.getBatchId());
+                    "No garment configuration found for batch " + request.getBatchId());
         }
 
         // Store only the batch during validation.
         session.setBatchId(request.getBatchId());
 
-        return new GarmentValidateResponse(
-                true,
-                "Garments fetched successfully",
-                batchData);
+        AssessmentModule module =
+                assessmentModuleRepository.findById(moduleInstance.getAssessmentModuleId())
+                        .orElseThrow(() ->
+                                new BadRequestException("Assessment module configuration not found"));
+
+        GarmentValidateResponse response = new GarmentValidateResponse();
+        response.setAssessmentSessionId(request.getAssessmentSessionId());
+        response.setAssessmentModuleInstanceId(moduleInstance.getAssessmentModuleInstanceId());
+        response.setModuleCode(module.getModuleCode());
+        response.setModuleName(module.getModuleName());
+        response.setStatus(moduleInstance.getModuleStatus().getStatusCode());
+        response.setStartedOn(moduleInstance.getStartedOn());
+        response.setSuccess(true);
+        response.setMessage("Garments fetched successfully");
+        response.setData(batchData);
+
+        return response;
     }
 
     /**
      * Retrieves configured garments and groups areas beneath defects.
      * The detected flag defaults to false.
      */
-    private GarmentValidateResponse.BatchGarmentsData getBatchConfiguration(
-            Long batchId) {
+    private GarmentValidateResponse.BatchGarmentsData getBatchConfiguration(Long batchId) {
 
         try {
+            String batchName = jdbcTemplate.queryForObject(
+                    BATCH_NAME_SQL,
+                    String.class,
+                    batchId);
+
             List<BatchConfigurationRow> rows = jdbcTemplate.query(
                     BATCH_CONFIGURATION_SQL,
                     (rs, rowNum) -> mapBatchConfigurationRow(rs),
@@ -184,13 +192,12 @@ public class GarmentService {
             Map<String, GarmentValidateResponse.GarmentData> garments =
                     new LinkedHashMap<>();
 
-            Map<String, Map<Long, GarmentValidateResponse.DefectData>>
-                    defectsByGarment = new LinkedHashMap<>();
+            Map<String, Map<Long, GarmentValidateResponse.DefectData>> defectsByGarment =
+                    new LinkedHashMap<>();
 
             for (BatchConfigurationRow row : rows) {
 
-                if (row.getGarmentId() == null
-                        || row.getGarmentId().isBlank()) {
+                if (row.getGarmentId() == null || row.getGarmentId().isBlank()) {
                     continue;
                 }
 
@@ -201,6 +208,7 @@ public class GarmentService {
                                 garmentId,
                                 id -> new GarmentValidateResponse.GarmentData(
                                         id,
+                                        row.getGarmentName(),
                                         new ArrayList<>()));
 
                 Map<Long, GarmentValidateResponse.DefectData> defectMap =
@@ -225,14 +233,12 @@ public class GarmentService {
                     garment.getDefects().add(defect);
                 }
 
-                if (row.getAreaId() != null
-                        && row.getAreaName() != null) {
+                if (row.getAreaId() != null && row.getAreaName() != null) {
 
                     boolean areaAlreadyAdded =
                             defect.getAreas().stream()
                                     .anyMatch(area ->
-                                            row.getAreaId().equals(
-                                                    area.getId()));
+                                            row.getAreaId().equals(area.getId()));
 
                     if (!areaAlreadyAdded) {
                         defect.getAreas().add(
@@ -246,20 +252,20 @@ public class GarmentService {
 
             return new GarmentValidateResponse.BatchGarmentsData(
                     batchId,
+                    batchName,
                     new ArrayList<>(garments.values()));
 
         } catch (DataAccessException ex) {
             throw new BadRequestException(
-                    "Unable to retrieve garment configuration for batch "
-                            + batchId);
+                    "Unable to retrieve garment configuration for batch " + batchId);
         }
     }
 
-    private BatchConfigurationRow mapBatchConfigurationRow(
-            ResultSet rs) throws SQLException {
+    private BatchConfigurationRow mapBatchConfigurationRow(ResultSet rs) throws SQLException {
 
         return new BatchConfigurationRow(
                 rs.getString("garment_id"),
+                rs.getString("garment_name"),
                 rs.getObject("defect_id", Long.class),
                 rs.getString("defect_name"),
                 rs.getObject("area_id", Long.class),
@@ -277,8 +283,7 @@ public class GarmentService {
      * One AssessmentResponse is created for the overall module.
      */
     @Transactional
-    public GarmentSubmitResponse submitGarment(
-            GarmentSubmitRequest request) {
+    public GarmentSubmitResponse submitGarment(GarmentSubmitRequest request) {
 
         // 1. Validate the request.
         if (request == null) {
@@ -286,24 +291,19 @@ public class GarmentService {
         }
 
         if (request.getAssessmentSessionId() == null) {
-            throw new BadRequestException(
-                    "Assessment session ID is required");
+            throw new BadRequestException("Assessment session ID is required");
         }
 
         if (request.getAssessmentModuleInstanceId() == null) {
-            throw new BadRequestException(
-                    "Assessment module instance ID is required");
+            throw new BadRequestException("Assessment module instance ID is required");
         }
 
         if (request.getBatchId() == null || request.getBatchId() <= 0) {
-            throw new BadRequestException(
-                    "Batch ID must be a positive number");
+            throw new BadRequestException("Batch ID must be a positive number");
         }
 
-        if (request.getGarments() == null
-                || request.getGarments().isEmpty()) {
-            throw new BadRequestException(
-                    "At least one garment is required");
+        if (request.getGarments() == null || request.getGarments().isEmpty()) {
+            throw new BadRequestException("At least one garment is required");
         }
 
         // 2. Validate the assessment module.
@@ -315,8 +315,7 @@ public class GarmentService {
         validateDefectModule(moduleInstance);
 
         AssessmentSession session =
-                moduleInstance.getAssessmentAttempt()
-                        .getAssessmentSession();
+                moduleInstance.getAssessmentAttempt().getAssessmentSession();
 
         if (session.getBatchId() == null
                 || !request.getBatchId().equals(session.getBatchId())) {
@@ -328,6 +327,7 @@ public class GarmentService {
         OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
 
         List<GarmentResult> garmentResults = new ArrayList<>();
+        List<GarmentIdentificationResponse> pendingResponses = new ArrayList<>();
         Set<String> processedGarmentIds = new HashSet<>();
 
         int overallExpectedDefects = 0;
@@ -340,20 +340,17 @@ public class GarmentService {
         for (GarmentSubmission garmentSubmission : request.getGarments()) {
 
             if (garmentSubmission == null) {
-                throw new BadRequestException(
-                        "Garment submission cannot be null");
+                throw new BadRequestException("Garment submission cannot be null");
             }
 
-            String garmentId =
-                    normalizeGarmentId(garmentSubmission.getGarmentId());
+            String garmentId = normalizeGarmentId(garmentSubmission.getGarmentId());
 
             if (!processedGarmentIds.add(garmentId.toLowerCase())) {
                 throw new BadRequestException(
                         "Duplicate garment ID in request: " + garmentId);
             }
 
-            List<GarmentSelection> selections =
-                    garmentSubmission.getSelections();
+            List<GarmentSelection> selections = garmentSubmission.getSelections();
 
             if (selections == null) {
                 throw new BadRequestException(
@@ -362,9 +359,7 @@ public class GarmentService {
 
             // 4. Load expected configuration for this garment.
             List<ExpectedConfigurationItem> expectedConfigurations =
-                    getExpectedConfiguration(
-                            request.getBatchId(),
-                            garmentId);
+                    getExpectedConfiguration(request.getBatchId(), garmentId);
 
             if (expectedConfigurations.isEmpty()) {
                 throw new BadRequestException(
@@ -376,12 +371,9 @@ public class GarmentService {
             Set<String> expectedPairs = new HashSet<>();
             Set<Long> expectedAreas = new HashSet<>();
 
-            for (ExpectedConfigurationItem expected
-                    : expectedConfigurations) {
+            for (ExpectedConfigurationItem expected : expectedConfigurations) {
 
-                if (expected.getDefectId() != null
-                        && expected.getAreaId() != null) {
-
+                if (expected.getDefectId() != null && expected.getAreaId() != null) {
                     expectedPairs.add(
                             pairKey(
                                     expected.getDefectId(),
@@ -407,20 +399,17 @@ public class GarmentService {
 
                 if (selection == null) {
                     throw new BadRequestException(
-                            "Selection cannot be null for garment "
-                                    + garmentId);
+                            "Selection cannot be null for garment " + garmentId);
                 }
 
                 if (selection.getDefectId() == null) {
                     throw new BadRequestException(
-                            "Defect ID is required for garment "
-                                    + garmentId);
+                            "Defect ID is required for garment " + garmentId);
                 }
 
                 if (selection.getAreaId() == null) {
                     throw new BadRequestException(
-                            "Area ID is required for garment "
-                                    + garmentId);
+                            "Area ID is required for garment " + garmentId);
                 }
 
                 String key = pairKey(
@@ -429,8 +418,7 @@ public class GarmentService {
 
                 if (!submittedPairs.add(key)) {
                     throw new BadRequestException(
-                            "Duplicate defect and area selection for garment "
-                                    + garmentId);
+                            "Duplicate defect and area selection for garment " + garmentId);
                 }
 
                 submittedAreas.add(selection.getAreaId());
@@ -439,7 +427,6 @@ public class GarmentService {
             // 6. Calculate this garment's scores.
             int totalExpectedDefects = expectedPairs.size();
             int totalExpectedAreas = expectedAreas.size();
-
             int correctlyIdentifiedDefects = 0;
 
             for (String expectedPair : expectedPairs) {
@@ -456,17 +443,11 @@ public class GarmentService {
                 }
             }
 
-            boolean allDefectsIdentified =
-                    submittedPairs.containsAll(expectedPairs);
+            boolean allDefectsIdentified = submittedPairs.containsAll(expectedPairs);
+            boolean allAreasIdentified = submittedAreas.containsAll(expectedAreas);
 
-            boolean allAreasIdentified =
-                    submittedAreas.containsAll(expectedAreas);
-
-            BigDecimal defectScore =
-                    allDefectsIdentified ? FULL_SCORE : ZERO_SCORE;
-
-            BigDecimal areaScore =
-                    allAreasIdentified ? FULL_SCORE : ZERO_SCORE;
+            BigDecimal defectScore = allDefectsIdentified ? FULL_SCORE : ZERO_SCORE;
+            BigDecimal areaScore = allAreasIdentified ? FULL_SCORE : ZERO_SCORE;
 
             BigDecimal combinedScore =
                     allDefectsIdentified && allAreasIdentified
@@ -474,9 +455,7 @@ public class GarmentService {
                             : ZERO_SCORE;
 
             String garmentResult =
-                    combinedScore.compareTo(PASS_MARK) >= 0
-                            ? "PASS"
-                            : "FAIL";
+                    combinedScore.compareTo(PASS_MARK) >= 0 ? "PASS" : "FAIL";
 
             // 7. Store the selections for this garment.
             for (GarmentSelection selection : selections) {
@@ -487,11 +466,9 @@ public class GarmentService {
 
                 ExpectedConfigurationItem matchedExpected = null;
 
-                for (ExpectedConfigurationItem expected
-                        : expectedConfigurations) {
+                for (ExpectedConfigurationItem expected : expectedConfigurations) {
 
-                    if (expected.getDefectId() == null
-                            || expected.getAreaId() == null) {
+                    if (expected.getDefectId() == null || expected.getAreaId() == null) {
                         continue;
                     }
 
@@ -505,11 +482,8 @@ public class GarmentService {
                     }
                 }
 
-                boolean defectCorrect =
-                        expectedPairs.contains(selectedPair);
-
-                boolean areaCorrect =
-                        expectedAreas.contains(selection.getAreaId());
+                boolean defectCorrect = expectedPairs.contains(selectedPair);
+                boolean areaCorrect = expectedAreas.contains(selection.getAreaId());
 
                 GarmentIdentificationResponse response =
                         new GarmentIdentificationResponse();
@@ -527,10 +501,8 @@ public class GarmentService {
 
                 response.setDefectCorrect(defectCorrect);
                 response.setAreaCorrect(areaCorrect);
-                response.setDefectScore(
-                        defectCorrect ? FULL_SCORE : ZERO_SCORE);
-                response.setAreaScore(
-                        areaCorrect ? FULL_SCORE : ZERO_SCORE);
+                response.setDefectScore(defectCorrect ? FULL_SCORE : ZERO_SCORE);
+                response.setAreaScore(areaCorrect ? FULL_SCORE : ZERO_SCORE);
                 response.setCreatedOn(now);
 
                 // Temporarily collect rows until AssessmentResponse is saved.
@@ -568,33 +540,37 @@ public class GarmentService {
         session.setGarmentId(garmentResults.get(0).getGarmentId());
 
         // 10. Save one overall assessment response.
-        AssessmentResponse assessmentResponse =
-                new AssessmentResponse();
+        AssessmentResponse assessmentResponse = new AssessmentResponse();
 
         assessmentResponse.setAssessmentModuleInstanceId(
                 moduleInstance.getAssessmentModuleInstanceId());
+
         assessmentResponse.setResponseStatusId(null);
         assessmentResponse.setStartedOn(moduleInstance.getStartedOn());
         assessmentResponse.setCompletedOn(now);
         assessmentResponse.setTimeTakenSeconds(null);
         assessmentResponse.setTotalQuestions(overallExpectedDefects);
         assessmentResponse.setAnsweredQuestions(overallAnsweredPairs);
+
         assessmentResponse.setUnansweredQuestions(
                 Math.max(
                         overallExpectedDefects - overallCorrectDefects,
                         0));
+
         assessmentResponse.setRawScore(moduleScore);
         assessmentResponse.setPercentage(moduleScore);
+
         assessmentResponse.setRemarks(
                 "Combined Defect and Area Identification for "
                         + garmentResults.size() + " garment(s)");
+
         assessmentResponse.setCreatedOn(now);
 
-        assessmentResponse =
-                assessmentResponseRepository.save(assessmentResponse);
+        assessmentResponse = assessmentResponseRepository.save(assessmentResponse);
 
         // 11. Save every garment's selection against the overall response.
         for (GarmentIdentificationResponse response : pendingResponses) {
+
             response.setAssessmentResponseId(
                     assessmentResponse.getAssessmentResponseId());
 
@@ -629,14 +605,12 @@ public class GarmentService {
 
             if (nextModule.getSequenceNo() == null
                     || moduleInstance.getSequenceNo() == null
-                    || nextModule.getSequenceNo()
-                            <= moduleInstance.getSequenceNo()) {
+                    || nextModule.getSequenceNo() <= moduleInstance.getSequenceNo()) {
                 continue;
             }
 
             if (nextModule.getModuleStatus() == null
-                    || !LOCKED.equals(
-                            nextModule.getModuleStatus().getStatusCode())) {
+                    || !LOCKED.equals(nextModule.getModuleStatus().getStatusCode())) {
                 continue;
             }
 
@@ -669,9 +643,6 @@ public class GarmentService {
                 nextModuleCode);
     }
 
-    private final List<GarmentIdentificationResponse> pendingResponses =
-            new ArrayList<>();
-
     private AssessmentModuleInstance findModuleInstance(
             UUID moduleInstanceId,
             UUID assessmentSessionId) {
@@ -685,8 +656,7 @@ public class GarmentService {
                                 "Assessment module does not belong to this assessment"));
     }
 
-    private void validateDefectModule(
-            AssessmentModuleInstance moduleInstance) {
+    private void validateDefectModule(AssessmentModuleInstance moduleInstance) {
 
         AssessmentModule module =
                 assessmentModuleRepository
@@ -695,14 +665,13 @@ public class GarmentService {
                                 new BadRequestException(
                                         "Assessment module configuration not found"));
 
-        if (!DEFECT_MODULE_CODE.equals(module.getModuleCode())) {
+        if (!AREA_DEFECT_MODULE_CODE.equals(module.getModuleCode())) {
             throw new BadRequestException(
                     "Garment identification must be performed in the DEFECT module");
         }
 
         if (moduleInstance.getModuleStatus() == null
-                || !IN_PROGRESS.equals(
-                        moduleInstance.getModuleStatus().getStatusCode())) {
+                || !IN_PROGRESS.equals(moduleInstance.getModuleStatus().getStatusCode())) {
 
             throw new BadRequestException(
                     "Defect and area identification must be started before submitting");
@@ -719,14 +688,15 @@ public class GarmentService {
                     (rs, rowNum) -> mapExpectedConfiguration(rs),
                     batchId,
                     garmentId);
+
         } catch (DataAccessException ex) {
             throw new BadRequestException(
                     "Unable to retrieve the expected garment configuration");
         }
     }
 
-    private ExpectedConfigurationItem mapExpectedConfiguration(
-            ResultSet rs) throws SQLException {
+    private ExpectedConfigurationItem mapExpectedConfiguration(ResultSet rs)
+            throws SQLException {
 
         return new ExpectedConfigurationItem(
                 rs.getObject("submission_detail_id", Long.class),
@@ -750,6 +720,7 @@ public class GarmentService {
     private static class BatchConfigurationRow {
 
         private final String garmentId;
+        private final String garmentName;
         private final Long defectId;
         private final String defectName;
         private final Long areaId;
@@ -757,12 +728,14 @@ public class GarmentService {
 
         private BatchConfigurationRow(
                 String garmentId,
+                String garmentName,
                 Long defectId,
                 String defectName,
                 Long areaId,
                 String areaName) {
 
             this.garmentId = garmentId;
+            this.garmentName = garmentName;
             this.defectId = defectId;
             this.defectName = defectName;
             this.areaId = areaId;
@@ -771,6 +744,10 @@ public class GarmentService {
 
         public String getGarmentId() {
             return garmentId;
+        }
+
+        public String getGarmentName() {
+            return garmentName;
         }
 
         public Long getDefectId() {
