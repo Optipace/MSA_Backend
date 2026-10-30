@@ -19,6 +19,8 @@ import java.util.UUID;
 @Service
 public class AssessmentService {
 
+    private static final String AREA_DEFECT_MODULE_CODE = "AREA_DEFECT";
+
     private final EmployeeRepository employeeRepository;
     private final AssessmentTemplateRepository assessmentTemplateRepository;
     private final AssessmentTemplateModuleRepository assessmentTemplateModuleRepository;
@@ -506,9 +508,9 @@ public class AssessmentService {
                                 new BadRequestException(
                                         "Assessment module configuration not found"));
 
-        if (!"DEFECT".equals(module.getModuleCode())) {
+        if (!AREA_DEFECT_MODULE_CODE.equals(module.getModuleCode())) {
             throw new BadRequestException(
-                    "Retest is allowed only for the combined Area & Defect test");
+                    "Retest is allowed only for the combined AREA_DEFECT test");
         }
 
         AssessmentSession oldSession =
@@ -556,7 +558,7 @@ public class AssessmentService {
         newSession.setTotalScore(null);
         newSession.setPercentage(null);
         newSession.setCompetencyRatingId(null);
-        newSession.setRemarks("Area & Defect retest");
+        newSession.setRemarks("Area_Defect retest");
 
         newSession.setCreatedBy(oldSession.getCreatedBy());
         newSession.setCreatedOn(now);
@@ -574,7 +576,7 @@ public class AssessmentService {
         newAttempt.setTotalScore(null);
         newAttempt.setPercentage(null);
         newAttempt.setResult(null);
-        newAttempt.setRemarks("Area & Defect retest");
+        newAttempt.setRemarks("Area_Defect retest");
         newAttempt.setCreatedOn(now);
         newAttempt.setRecordStatus("A");
 
@@ -609,7 +611,7 @@ public class AssessmentService {
                 newInstance.getAssessmentModuleInstanceId(),
                 module.getModuleCode(),
                 newInstance.getModuleStatus().getStatusCode(),
-                "Area & Defect retest session created successfully"
+                "Area_Defect retest session created successfully"
         );
     }
 
