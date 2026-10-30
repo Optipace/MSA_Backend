@@ -1,8 +1,9 @@
-
 package com.msa.msa.garment.dto;
 
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -15,6 +16,12 @@ import lombok.Setter;
 @AllArgsConstructor
 public class GarmentValidateResponse {
 
+    private UUID assessmentSessionId;
+    private UUID assessmentModuleInstanceId;
+    private String moduleCode;
+    private String moduleName;
+    private String status;
+    private OffsetDateTime startedOn;
     private boolean success;
     private String message;
     private BatchGarmentsData data;
@@ -26,7 +33,7 @@ public class GarmentValidateResponse {
     public static class BatchGarmentsData {
 
         private Long batchId;
-
+        private String batchName;
         private List<GarmentData> garments = new ArrayList<>();
     }
 
@@ -37,6 +44,7 @@ public class GarmentValidateResponse {
     public static class GarmentData {
 
         private String garmentId;
+        private String garmentName;
 
         private List<DefectData> defects = new ArrayList<>();
     }
