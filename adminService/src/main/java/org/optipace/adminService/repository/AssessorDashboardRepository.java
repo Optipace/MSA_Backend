@@ -1,3 +1,4 @@
+
 package org.optipace.adminService.repository;
 
 import lombok.RequiredArgsConstructor;
@@ -34,9 +35,6 @@ public class AssessorDashboardRepository {
 
         /*
          * 1. Dashboard summary
-         *
-         * Counts completed and pending module instances.
-         * Applies organization and factory filters.
          */
         String summarySql = """
             SELECT
@@ -104,10 +102,13 @@ public class AssessorDashboardRepository {
                 summarySql,
                 organisationId, organisationId,
                 factoryId, factoryId,
+
                 organisationId, organisationId,
                 factoryId, factoryId,
+
                 organisationId, organisationId,
                 factoryId, factoryId,
+
                 organisationId, organisationId,
                 factoryId, factoryId
         );
@@ -117,9 +118,17 @@ public class AssessorDashboardRepository {
         /*
          * 2. Employee list
          *
-         * Includes active employees even if they have no assessment.
-         * Selects the latest assessment session for each employee.
+         * Existing session:
+         *     Use its assessment template.
+         *
+         * No session:
+         *     Match employee designation, department
+         *     and experience against template eligibility.
+         *
+         * No eligibility match:
+         *     Use active default template.
          */
+
         String employeeSql = """
             SELECT
                 CONCAT_WS(
@@ -130,27 +139,107 @@ public class AssessorDashboardRepository {
                 ) AS "name",
 
                 e.employee_id AS "empId",
+
                 e.employee_code AS "empCode",
-                s.assessment_template_id AS "assessmentTemplateId",
+
+                COALESCE(
+                    s.assessment_template_id,
+                    eligible.assessment_template_id,
+                    default_template.assessment_template_id
+                ) AS "assessmentTemplateId",
+
                 d.department_name AS "department",
+
                 f.factory_name AS "factory",
+
                 CAST(s.assigned_on AS DATE) AS "date",
-                COALESCE(ast.status_name, 'Not Assigned') AS "status"
+
+                COALESCE(
+                    ast.status_name,
+                    'Not Assigned'
+                ) AS "status"
 
             FROM master.employee e
 
+            /*
+             * Latest assessment session
+             */
             LEFT JOIN LATERAL (
                 SELECT
                     s1.assessment_template_id,
                     s1.assigned_on,
                     s1.assessment_status_id
+
                 FROM assessment.assessment_session s1
+
                 WHERE s1.employee_id = e.employee_id
+
                 ORDER BY
                     s1.assigned_on DESC NULLS LAST,
                     s1.assessment_session_id DESC
+
                 LIMIT 1
             ) s ON TRUE
+
+            /*
+             * Employee eligible assessment template
+             */
+            LEFT JOIN LATERAL (
+                SELECT
+                    ate.assessment_template_id
+
+                FROM config.assessment_template_eligibility ate
+
+                JOIN config.assessment_template at
+                    ON at.assessment_template_id =
+                       ate.assessment_template_id
+
+                WHERE ate.designation_id = e.designation_id
+
+                  AND ate.department_id = e.department_id
+
+                  AND e.experience_years >= ate.minimum_experience
+
+                  AND at.record_status = 'A'
+
+                  AND CURRENT_DATE >= at.effective_from
+
+                  AND (
+                      at.effective_to IS NULL
+                      OR CURRENT_DATE <= at.effective_to
+                  )
+
+                ORDER BY
+                    ate.minimum_experience DESC,
+                    ate.assessment_template_id
+
+                LIMIT 1
+            ) eligible ON TRUE
+
+            /*
+             * Default assessment template
+             */
+            LEFT JOIN LATERAL (
+                SELECT
+                    at.assessment_template_id
+
+                FROM config.assessment_template at
+
+                WHERE at.is_default = TRUE
+
+                  AND at.record_status = 'A'
+
+                  AND CURRENT_DATE >= at.effective_from
+
+                  AND (
+                      at.effective_to IS NULL
+                      OR CURRENT_DATE <= at.effective_to
+                  )
+
+                ORDER BY at.assessment_template_id
+
+                LIMIT 1
+            ) default_template ON TRUE
 
             LEFT JOIN master.department d
                 ON d.department_id = e.department_id
@@ -159,10 +248,13 @@ public class AssessorDashboardRepository {
                 ON f.factory_id = e.factory_id
 
             LEFT JOIN assessment.assessment_status ast
-                ON ast.assessment_status_id = s.assessment_status_id
+                ON ast.assessment_status_id =
+                   s.assessment_status_id
 
             WHERE e.record_status = 'A'
+
               AND (? IS NULL OR e.organization_id = ?)
+
               AND (? IS NULL OR e.factory_id = ?)
 
             ORDER BY
@@ -204,9 +296,13 @@ public class AssessorDashboardRepository {
                 factoryId, factoryId
         );
 
-        long total = totalElements != null ? totalElements : 0L;
+        long total = totalElements != null
+                ? totalElements
+                : 0L;
 
-        int totalPages = (int) Math.ceil((double) total / size);
+        int totalPages = (int) Math.ceil(
+                (double) total / size
+        );
 
         /*
          * 5. Build pagination response
