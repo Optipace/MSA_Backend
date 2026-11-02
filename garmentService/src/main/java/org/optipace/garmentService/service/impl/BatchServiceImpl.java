@@ -205,7 +205,8 @@ public class BatchServiceImpl implements BatchService {
 
     private ListOfBatchResponse mapToListResponse(Batch batch) {
 
-        Boolean isGarmentFound = batchRepository.isGarmentFoundByBatchId(batch.getBatchId());
+        Boolean isGarmentFound =
+                batchRepository.isGarmentFoundByBatchId(batch.getBatchId());
 
         return new ListOfBatchResponse(
                 batch.getBatchId(),

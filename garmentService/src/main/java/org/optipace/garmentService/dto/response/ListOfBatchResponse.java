@@ -13,4 +13,5 @@ public class ListOfBatchResponse {
     private String batchName;
     private String batchCode;
     private Integer displayOrder;
+    private boolean isGarmentFound;
 }
