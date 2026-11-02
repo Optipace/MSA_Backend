@@ -84,26 +84,28 @@ public class BatchServiceImpl implements BatchService {
     // ---------- GET ALL ----------
 
 
-@Override
-@Transactional(readOnly = true)
-public SingleResponse<List<ListOfBatchResponse>> getAllBatches() {
+    @Override
+    @Transactional(readOnly = true)
+    public SingleResponse<List<ListOfBatchResponse>> getAllBatches() {
 
-    List<Batch> batches = batchRepository.findByRecordStatus(STATUS_ACTIVE);
+        List<Batch> batches =
+                batchRepository.findByRecordStatus(STATUS_ACTIVE);
 
-    List<ListOfBatchResponse> batchResponses = batches.stream()
-            .sorted(
-                    Comparator.comparing(
-                            Batch::getDisplayOrder,
-                            Comparator.nullsLast(Comparator.naturalOrder()))
-                    .thenComparing(
-                            Batch::getBatchName,
-                            Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER))
-            )
-            .map(this::mapToListResponse)
-            .toList();
+        List<ListOfBatchResponse> batchResponses = batches.stream()
+                .sorted(
+                        Comparator.comparing(
+                                Batch::getDisplayOrder,
+                                Comparator.nullsLast(Comparator.naturalOrder())
+                        ).thenComparing(
+                                Batch::getBatchName,
+                                Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER)
+                        )
+                )
+                .map(this::mapToListResponse)
+                .toList();
 
-    return SingleResponse.success(batchResponses);
-}
+        return SingleResponse.success(batchResponses);
+    }
 
 
     // ---------- GET BY ID ----------
@@ -201,12 +203,16 @@ public SingleResponse<List<ListOfBatchResponse>> getAllBatches() {
         return r;
     }
 
-    private ListOfBatchResponse mapToListResponse(Batch b) {
+    private ListOfBatchResponse mapToListResponse(Batch batch) {
+
+        Boolean isGarmentFound = batchRepository.isGarmentFoundByBatchId(batch.getBatchId());
+
         return new ListOfBatchResponse(
-                b.getBatchId(),
-                b.getBatchName(),
-                b.getBatchCode(),
-                b.getDisplayOrder()
+                batch.getBatchId(),
+                batch.getBatchName(),
+                batch.getBatchCode(),
+                batch.getDisplayOrder(),
+                isGarmentFound
         );
     }
 }
