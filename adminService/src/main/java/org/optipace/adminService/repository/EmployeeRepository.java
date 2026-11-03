@@ -1,8 +1,10 @@
 package org.optipace.adminService.repository;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.optipace.adminService.dto.response.AdminListResponse;
+import org.optipace.adminService.dto.response.EmployeeResponse;
 import org.optipace.adminService.entity.Employee;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -81,4 +83,23 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
     @Transactional
     @Query(value = "UPDATE security.employee_login SET account_locked = :locked WHERE employee_id = :employeeId", nativeQuery = true)
     void updateLoginLockStatus(@Param("employeeId") Long employeeId, @Param("locked") boolean locked);
+    
+    Optional<Employee> findByEmployeeId(Long employeeId);
+    
+    List<Employee> findByOrganizationIdAndFactoryId(Long organizationId, Long factoryId);
+    
+    @Query("""
+    	    SELECT new org.optipace.adminService.dto.response.EmployeeResponse(
+    	        e.employeeId,
+    	        e.employeeCode,
+    	        e.firstName,
+    	        e.email,
+    	        e.organizationId,
+    	        e.factoryId
+    	    )
+    	    FROM Employee e
+    	    WHERE e.employeeId = :userId
+    	    """)
+    	Optional<EmployeeResponse> findEmployeeResponseByUserId(@Param("userId") Long userId);
+
 }

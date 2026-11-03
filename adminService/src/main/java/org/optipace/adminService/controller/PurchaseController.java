@@ -4,8 +4,10 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+import org.optipace.adminService.dto.request.DeductPointsRequest;
 import org.optipace.adminService.dto.request.PaymentCallbackRequestDto;
 import org.optipace.adminService.dto.request.PurchaseRequestDto;
+import org.optipace.adminService.dto.response.DeductPointsResponse;
 import org.optipace.adminService.dto.response.PurchaseResponse;
 import org.optipace.adminService.dto.response.SingleResponse;
 import org.optipace.adminService.service.PurchaseService;
@@ -60,5 +62,21 @@ public class PurchaseController {
         
         log.info("REST callback — txn: {}", callback.getTransactionId());
         return ResponseEntity.ok(purchaseService.handleCallback(callback));
+    }
+    
+    @PostMapping("/deduct")
+    public ResponseEntity<SingleResponse<DeductPointsResponse>> deductPoints(
+            @RequestBody @Valid DeductPointsRequest request,
+            @RequestHeader("X-User-Id") String userId) {
+
+        log.info("POST /api/v1/points/deduct — org={}, module={}, session={}",
+                request.getOrganizationId(),
+                request.getModuleCode(),
+                request.getReferenceId());
+
+        SingleResponse<DeductPointsResponse> response =
+                purchaseService.deductPoints(request, userId);
+
+        return ResponseEntity.ok(response);
     }
 }

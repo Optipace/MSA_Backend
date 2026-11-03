@@ -12,6 +12,8 @@ public class EmployeeDetailsResponse {
     private String employeeName;
     private String department;
     private String factory;
+    private String factory_id;
+
 
     private PerformanceSummaryResponse performanceSummary;
 

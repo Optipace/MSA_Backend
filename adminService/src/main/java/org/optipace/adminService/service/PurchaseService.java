@@ -1,9 +1,11 @@
 package org.optipace.adminService.service;
 
 import org.optipace.adminService.dto.response.BillingHistoryResponse;
+import org.optipace.adminService.dto.response.DeductPointsResponse;
 
 import java.util.List;
 
+import org.optipace.adminService.dto.request.DeductPointsRequest;
 import org.optipace.adminService.dto.request.PaymentCallbackRequestDto;
 import org.optipace.adminService.dto.request.PurchaseRequestDto;
 import org.optipace.adminService.dto.response.PaymentResponse;
@@ -30,4 +32,7 @@ public interface PurchaseService {
     
  // ⭐ New method
     SingleResponse<List<BillingHistoryResponse>> getBillingHistory(Long organizationId);
+
+    SingleResponse<DeductPointsResponse> deductPoints(DeductPointsRequest request, String userId);
+
 }

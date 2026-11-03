@@ -1,10 +1,14 @@
 package org.optipace.adminService.repository;
 
 import org.optipace.adminService.entity.OrganizationPoints;
+import org.optipace.adminService.enums.PointTransactionType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+
+import jakarta.persistence.LockModeType;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -51,4 +55,19 @@ public interface OrganizationPointsRepository extends JpaRepository<Organization
     List<OrganizationPoints> findExpiringBetween(
             @Param("today") LocalDate today,
             @Param("futureDate") LocalDate futureDate);
+    
+    
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select op from OrganizationPoints op " +
+           "where op.organizationId = :orgId " +
+           "  and (op.isExpired = false or op.isExpired is null) " +
+           "  and (op.expiryDate is null or op.expiryDate >= :today) " +
+           "  and op.availablePoints > 0 " +
+           "order by op.expiryDate asc nulls last, op.pointsId asc")
+    List<OrganizationPoints> findAllActiveForDeductionForUpdate(
+            @Param("orgId") Long organizationId,
+            @Param("today") LocalDate today);
+    
+ 
+    	
 }

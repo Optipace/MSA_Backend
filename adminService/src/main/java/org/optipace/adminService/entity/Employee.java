@@ -34,6 +34,9 @@ public class Employee {
     @Column(name = "organization_id")
     private Long organizationId;
     
+    @Column(name = "factory_id")
+    private Long factoryId;
+    
     @Column(name = "updated_by")
     private Long updatedBy;      // Must be Long, not int or String
 }

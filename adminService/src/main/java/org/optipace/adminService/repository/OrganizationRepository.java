@@ -107,4 +107,5 @@ public interface OrganizationRepository extends JpaRepository<Organization, Long
     Long findOrganizationIdByEmployeeId(@Param("factoryAdminId") Long factoryAdminId);
 
    // Page<Employee> findByOrganizationIdAndRecordStatus(Long organizationId, Character recordStatus, Pageable pageable);
+
 }

@@ -1,6 +1,7 @@
 package org.optipace.adminService.repository;
 
 import org.optipace.adminService.entity.PointTransaction;
+import org.optipace.adminService.enums.PointTransactionType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -15,5 +16,8 @@ public interface PointTransactionRepository extends JpaRepository<PointTransacti
     
     List<PointTransaction> findByReferenceTypeAndReferenceId(String referenceType, Long referenceId);
 
-    
+    boolean existsByReferenceTypeAndReferenceIdAndTransactionType(
+            String referenceType,
+            Long referenceId,
+            PointTransactionType transactionType);
 }
