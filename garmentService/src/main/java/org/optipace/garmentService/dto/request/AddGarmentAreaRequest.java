@@ -12,8 +12,8 @@ import lombok.Setter;
 @Setter
 public class AddGarmentAreaRequest {
 
-    @NotNull(message = "Garment type ID is required")
-    private Long garmentTypeId;
+//    @NotNull(message = "Garment type ID is required")
+//    private Long garmentTypeId;
 
     @NotBlank(message = "Area code is required")
     @Size(max = 30, message = "Area code cannot exceed 30 characters")

@@ -19,13 +19,11 @@ public interface GarmentAreaRepository
             Long garmentAreaId
     );
 
-    boolean existsByGarmentTypeIdAndAreaCode(
-            Long garmentTypeId,
+    boolean existsByAreaCode(
             String areaCode
     );
 
-    boolean existsByGarmentTypeIdAndAreaCodeAndGarmentAreaIdNot(
-            Long garmentTypeId,
+    boolean existsByAreaCodeAndGarmentAreaIdNot(
             String areaCode,
             Long garmentAreaId
     );

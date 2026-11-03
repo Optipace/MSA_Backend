@@ -13,7 +13,7 @@ public class GarmentAreaResponse {
 
     private Long garmentAreaId;
 
-    private Long garmentTypeId;
+   // private Long garmentTypeId;
 
     private String areaCode;
 

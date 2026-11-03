@@ -33,9 +33,9 @@ public class GarmentArea {
     @Column(name = "garment_area_id")
     private Long garmentAreaId;
     
-    // ===== FK: garment_type =====
-    @Column(name = "garment_type_id", nullable = false)
-    private Long garmentTypeId;
+//    // ===== FK: garment_type =====
+//    @Column(name = "garment_type_id", nullable = false)
+//    private Long garmentTypeId;
     
     @Column(name = "area_code", length = 30, nullable = false)
     private String areaCode;
