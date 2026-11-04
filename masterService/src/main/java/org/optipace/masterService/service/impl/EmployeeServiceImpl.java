@@ -49,12 +49,7 @@ public class EmployeeServiceImpl implements EmployeeService {
 	private final SectionRepository sectionRepository;
 	private final AuthServiceClient authServiceClient;
 	private final ModelMapper modelMapper;
-
-	private static final Long DEFAULT_FACTORY_ID = 1L;
-	private static final Long DEFAULT_DEPARTMENT_ID = 1L;
-	private static final Long DEFAULT_SHIFT_ID = 1L;
-	private static final Long DEFAULT_DESIGNATION_ID = 1L;
-	private static final Long DEFAULT_SECTION_ID = 1L;
+	private final FactoryContextService factoryContextService;
 
 	@Override
 	public SingleResponse<?> createEmployee(List<AddEmployeeRequest> requestList, String adminId) {
@@ -163,93 +158,93 @@ public class EmployeeServiceImpl implements EmployeeService {
 	
 	// get all the emaployee
 	
-	//@Override
-	public SingleResponse<PageResponse<ListOfEmployeeResponse>> getAllEmployee(Pageable pageable) {
-		
-		
-		  Pageable sortedPageable = pageable.getSort().isSorted() ? pageable :
-		  PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(),
-		  Sort.by(Sort.Order.asc("firstName").nullsLast()));
-		 
-		//log.warn("method call getAllEmployee", superAdminId);
-
-	    
-		/*
-		 * Long organizationId =
-		 * organizationRepository.findOrganizationIdByEmployeeId(superAdminId);
-		 * 
-		 * Page<Employee> employeePage = organizationRepository
-		 * .findByOrganizationIdAndRecordStatus(organizationId, 'A', pageable);
-		 */
-	   
-	      //  System.out.println(employeePage);
-		 // old code
-		Page<Employee> employeePage = employeeRepository.findByRecordStatus('A', sortedPageable);
-		List<Employee> employeeList = employeePage.getContent();
-
-		Set<Long> uniqueIdsForRoles = new HashSet<>();
-		for (Employee emp : employeeList) {
-			uniqueIdsForRoles.add(emp.getEmployeeId());
-			if (emp.getEmployee() != null) {
-				uniqueIdsForRoles.add(emp.getEmployee().getEmployeeId());
-			}
-		}
-		List<Long> allRequiredIds = new ArrayList<>(uniqueIdsForRoles);
-
-		Map<Long, Long> employeeRoleMap = new HashMap<>();
-		if (!allRequiredIds.isEmpty()) {
-			try {
-				SingleResponse<Map<Long, Long>> employeeRoleMapResponse = authServiceClient
-						.getRoleIdsForEmployees(allRequiredIds);
-				employeeRoleMap = employeeRoleMapResponse.getData();
-			} catch (FeignException e) {
-				log.warn("Failed to fetch role IDs from Auth Service for batch employee list", e);
-
-				String exactErrorMessage = "Authentication setup failed in upstream service.";
-				try {
-					ObjectMapper mapper = new ObjectMapper();
-					JsonNode errorNode = mapper.readTree(e.contentUTF8());
-
-					if (errorNode.has("response") && errorNode.get("response").has("message")) {
-						exactErrorMessage = errorNode.get("response").get("message").asText();
-					} else if (errorNode.has("message")) {
-						exactErrorMessage = errorNode.get("message").asText();
-					}
-				} catch (Exception parseException) {
-					log.warn("Could not parse Feign error body", parseException);
-				}
-				throw new MicroserviceException(e.status(), "Auth Service Error" + exactErrorMessage);
-
-			} catch (Exception e) {
-				log.error("Unexpected error caught while extracting role ids for employees");
-				throw new MicroserviceException(500,
-						"Employee role Ids fetching failed due to an internal system error.");
-			}
-		}
-
-		Map<Long, Long> finalRoleMap = employeeRoleMap;
-		List<ListOfEmployeeResponse> employeeResponseList = employeeList.stream().map(employee -> {
-			ListOfEmployeeResponse response = modelMapper.map(employee, ListOfEmployeeResponse.class);
-
-			response.setRoleId(finalRoleMap.get(employee.getEmployeeId()));
-//            response.setDateOfBirth(employee.getDateOfBirth());
-//            response.setDateOfJoining(employee.getDateOfJoining());
-			if (employee.getEmployee() != null) {
-				ManagerResponse managerDto = modelMapper.map(employee.getEmployee(), ManagerResponse.class);
-				managerDto.setRoleId(finalRoleMap.get(employee.getEmployee().getEmployeeId()));
-				response.setReportingManager(managerDto);
-//                response.setDateOfBirth(employee.getEmployee().getDateOfBirth());
-//                response.setDateOfJoining(employee.getEmployee().getDateOfJoining());
-			}
-			return response;
-		}).toList();
-
-		PageResponse<ListOfEmployeeResponse> pageResponse = new PageResponse<>(employeeResponseList,
-				employeePage.getNumber(), employeePage.getSize(), employeePage.getTotalElements(),
-				employeePage.getTotalPages(), employeePage.isLast());
-
-		return new SingleResponse<>(pageResponse, CustomStatus.SUCCESS);
-	} 
+//	@Override
+//	public SingleResponse<PageResponse<ListOfEmployeeResponse>> getAllEmployee(Pageable pageable) {
+//
+//
+//		  Pageable sortedPageable = pageable.getSort().isSorted() ? pageable :
+//		  PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(),
+//		  Sort.by(Sort.Order.asc("firstName").nullsLast()));
+//
+//		//log.warn("method call getAllEmployee", superAdminId);
+//
+//
+//		/*
+//		 * Long organizationId =
+//		 * organizationRepository.findOrganizationIdByEmployeeId(superAdminId);
+//		 *
+//		 * Page<Employee> employeePage = organizationRepository
+//		 * .findByOrganizationIdAndRecordStatus(organizationId, 'A', pageable);
+//		 */
+//
+//	      //  System.out.println(employeePage);
+//		 // old code
+//		Page<Employee> employeePage = employeeRepository.findByRecordStatus('A', sortedPageable);
+//		List<Employee> employeeList = employeePage.getContent();
+//
+//		Set<Long> uniqueIdsForRoles = new HashSet<>();
+//		for (Employee emp : employeeList) {
+//			uniqueIdsForRoles.add(emp.getEmployeeId());
+//			if (emp.getEmployee() != null) {
+//				uniqueIdsForRoles.add(emp.getEmployee().getEmployeeId());
+//			}
+//		}
+//		List<Long> allRequiredIds = new ArrayList<>(uniqueIdsForRoles);
+//
+//		Map<Long, Long> employeeRoleMap = new HashMap<>();
+//		if (!allRequiredIds.isEmpty()) {
+//			try {
+//				SingleResponse<Map<Long, Long>> employeeRoleMapResponse = authServiceClient
+//						.getRoleIdsForEmployees(allRequiredIds);
+//				employeeRoleMap = employeeRoleMapResponse.getData();
+//			} catch (FeignException e) {
+//				log.warn("Failed to fetch role IDs from Auth Service for batch employee list", e);
+//
+//				String exactErrorMessage = "Authentication setup failed in upstream service.";
+//				try {
+//					ObjectMapper mapper = new ObjectMapper();
+//					JsonNode errorNode = mapper.readTree(e.contentUTF8());
+//
+//					if (errorNode.has("response") && errorNode.get("response").has("message")) {
+//						exactErrorMessage = errorNode.get("response").get("message").asText();
+//					} else if (errorNode.has("message")) {
+//						exactErrorMessage = errorNode.get("message").asText();
+//					}
+//				} catch (Exception parseException) {
+//					log.warn("Could not parse Feign error body", parseException);
+//				}
+//				throw new MicroserviceException(e.status(), "Auth Service Error" + exactErrorMessage);
+//
+//			} catch (Exception e) {
+//				log.error("Unexpected error caught while extracting role ids for employees");
+//				throw new MicroserviceException(500,
+//						"Employee role Ids fetching failed due to an internal system error.");
+//			}
+//		}
+//
+//		Map<Long, Long> finalRoleMap = employeeRoleMap;
+//		List<ListOfEmployeeResponse> employeeResponseList = employeeList.stream().map(employee -> {
+//			ListOfEmployeeResponse response = modelMapper.map(employee, ListOfEmployeeResponse.class);
+//
+//			response.setRoleId(finalRoleMap.get(employee.getEmployeeId()));
+////            response.setDateOfBirth(employee.getDateOfBirth());
+////            response.setDateOfJoining(employee.getDateOfJoining());
+//			if (employee.getEmployee() != null) {
+//				ManagerResponse managerDto = modelMapper.map(employee.getEmployee(), ManagerResponse.class);
+//				managerDto.setRoleId(finalRoleMap.get(employee.getEmployee().getEmployeeId()));
+//				response.setReportingManager(managerDto);
+////                response.setDateOfBirth(employee.getEmployee().getDateOfBirth());
+////                response.setDateOfJoining(employee.getEmployee().getDateOfJoining());
+//			}
+//			return response;
+//		}).toList();
+//
+//		PageResponse<ListOfEmployeeResponse> pageResponse = new PageResponse<>(employeeResponseList,
+//				employeePage.getNumber(), employeePage.getSize(), employeePage.getTotalElements(),
+//				employeePage.getTotalPages(), employeePage.isLast());
+//
+//		return new SingleResponse<>(pageResponse, CustomStatus.SUCCESS);
+//	}
 
 	@Override
 	@Transactional
@@ -687,4 +682,193 @@ public class EmployeeServiceImpl implements EmployeeService {
 //            log.error("Failed to send welcome email to {}", toEmail, e);
 //        }
 //    }
+@Override
+public SingleResponse<PageResponse<ListOfEmployeeResponse>> getAllEmployee(
+		Pageable pageable) {
+
+	// 1. Get logged-in Factory Admin's organization and factory scope
+	FactoryScope factoryScope =
+			factoryContextService.getCurrentFactoryScope();
+
+	Long organizationId = factoryScope.organisationId();
+	Long factoryId = factoryScope.factoryId();
+
+	log.info(
+			"Fetching employees for organizationId: {} and factoryId: {}",
+			organizationId,
+			factoryId
+	);
+
+	// 2. Apply default sorting by firstName if no sorting is provided
+	Pageable sortedPageable = pageable.getSort().isSorted()
+			? pageable
+			: PageRequest.of(
+			pageable.getPageNumber(),
+			pageable.getPageSize(),
+			Sort.by(Sort.Order.asc("firstName").nullsLast())
+	);
+
+	// 3. Fetch active employees belonging to the assigned organization and factory
+	Page<Employee> employeePage =
+			employeeRepository
+					.findByOrganization_OrganizationIdAndFactory_FactoryIdAndRecordStatus(
+							organizationId,
+							factoryId,
+							'A',
+							sortedPageable
+					);
+
+	List<Employee> employeeList = employeePage.getContent();
+
+	// 4. Collect employee IDs and reporting manager IDs
+	Set<Long> uniqueIdsForRoles = new HashSet<>();
+
+	for (Employee emp : employeeList) {
+
+		uniqueIdsForRoles.add(emp.getEmployeeId());
+
+		if (emp.getEmployee() != null) {
+			uniqueIdsForRoles.add(
+					emp.getEmployee().getEmployeeId()
+			);
+		}
+	}
+
+	List<Long> allRequiredIds =
+			new ArrayList<>(uniqueIdsForRoles);
+
+	// 5. Fetch role IDs from Auth Service
+	Map<Long, Long> employeeRoleMap = new HashMap<>();
+
+	if (!allRequiredIds.isEmpty()) {
+
+		try {
+
+			SingleResponse<Map<Long, Long>> employeeRoleMapResponse =
+					authServiceClient.getRoleIdsForEmployees(
+							allRequiredIds
+					);
+
+			employeeRoleMap = employeeRoleMapResponse.getData();
+
+		} catch (FeignException e) {
+
+			log.warn(
+					"Failed to fetch role IDs from Auth Service for batch employee list",
+					e
+			);
+
+			String exactErrorMessage =
+					"Authentication setup failed in upstream service.";
+
+			try {
+
+				ObjectMapper mapper = new ObjectMapper();
+
+				JsonNode errorNode =
+						mapper.readTree(e.contentUTF8());
+
+				if (errorNode.has("response")
+						&& errorNode.get("response").has("message")) {
+
+					exactErrorMessage =
+							errorNode.get("response")
+									.get("message")
+									.asText();
+
+				} else if (errorNode.has("message")) {
+
+					exactErrorMessage =
+							errorNode.get("message").asText();
+				}
+
+			} catch (Exception parseException) {
+
+				log.warn(
+						"Could not parse Feign error body",
+						parseException
+				);
+			}
+
+			throw new MicroserviceException(
+					e.status(),
+					"Auth Service Error: " + exactErrorMessage
+			);
+
+		} catch (Exception e) {
+
+			log.error(
+					"Unexpected error caught while extracting role IDs for employees",
+					e
+			);
+
+			throw new MicroserviceException(
+					500,
+					"Employee role IDs fetching failed due to an internal system error."
+			);
+		}
+	}
+
+	// 6. Map employees to response DTOs
+	Map<Long, Long> finalRoleMap = employeeRoleMap;
+
+	List<ListOfEmployeeResponse> employeeResponseList =
+			employeeList.stream()
+					.map(employee -> {
+
+						ListOfEmployeeResponse response =
+								modelMapper.map(
+										employee,
+										ListOfEmployeeResponse.class
+								);
+
+						// Set employee role ID
+						response.setRoleId(
+								finalRoleMap.get(
+										employee.getEmployeeId()
+								)
+						);
+
+						// Map reporting manager if available
+						if (employee.getEmployee() != null) {
+
+							ManagerResponse managerDto =
+									modelMapper.map(
+											employee.getEmployee(),
+											ManagerResponse.class
+									);
+
+							managerDto.setRoleId(
+									finalRoleMap.get(
+											employee.getEmployee()
+													.getEmployeeId()
+									)
+							);
+
+							response.setReportingManager(
+									managerDto
+							);
+						}
+
+						return response;
+					})
+					.toList();
+
+	// 7. Construct paginated response
+	PageResponse<ListOfEmployeeResponse> pageResponse =
+			new PageResponse<>(
+					employeeResponseList,
+					employeePage.getNumber(),
+					employeePage.getSize(),
+					employeePage.getTotalElements(),
+					employeePage.getTotalPages(),
+					employeePage.isLast()
+			);
+
+	// 8. Return successful response
+	return new SingleResponse<>(
+			pageResponse,
+			CustomStatus.SUCCESS
+	);
+}
 }
