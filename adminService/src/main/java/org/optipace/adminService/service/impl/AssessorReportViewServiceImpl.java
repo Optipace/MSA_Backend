@@ -1,5 +1,8 @@
+
 package org.optipace.adminService.service.impl;
 
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -23,23 +26,33 @@ public class AssessorReportViewServiceImpl
 
     @Override
     @Transactional(readOnly = true)
-    public AssessorReportViewResponse getAssessmentDetails(
-            String empCode) {
+    public AssessorReportViewResponse getAssessmentDetails(String empCode) {
 
-        // Find the employee's latest assessment session.
         UUID sessionId =
-                assessorReportViewRepository
-                        .getLatestSessionIdByEmpCode(empCode);
+                assessorReportViewRepository.getLatestSessionIdByEmpCode(empCode);
 
-        // Fetch summary information for that session.
+        if (sessionId == null) {
+
+            Map<String, Object> summary = new LinkedHashMap<>();
+            summary.put("employeeCode", empCode);
+            summary.put("message", "No test has been assigned to this employee");
+            summary.put("overallScore", 0);
+            summary.put("totalModules", 0);
+            summary.put("completedModules", 0);
+            summary.put("passedCount", 0);
+            summary.put("failedCount", 0);
+
+            return new AssessorReportViewResponse(
+                    summary,
+                    Collections.emptyList()
+            );
+        }
+
         Map<String, Object> summary =
-                assessorReportViewRepository
-                        .getAssessmentSummaryBySessionId(sessionId);
+                assessorReportViewRepository.getAssessmentSummaryBySessionId(sessionId);
 
-        // Fetch the individual test breakdown.
         List<Map<String, Object>> tests =
-                assessorReportViewRepository
-                        .getAssessmentDetailsBySessionId(sessionId);
+                assessorReportViewRepository.getAssessmentDetailsBySessionId(sessionId);
 
         return new AssessorReportViewResponse(summary, tests);
     }
