@@ -41,153 +41,169 @@ public class AssessorReportRepository {
         int offset = Math.multiplyExact(page, size);
 
         String sql = """
-            WITH dashboard_employees AS (
-                SELECT
-                    e.employee_id,
-                    e.employee_code,
-                    e.first_name,
-                    e.middle_name,
-                    e.last_name,
-                    e.department_id,
-                    e.factory_id
-                FROM master.employee e
-                WHERE e.record_status = 'A'
-                  AND e.organization_id = ?
-                  AND (? IS NULL OR e.factory_id = ?)
-            ),
+        	    WITH dashboard_employees AS (
+        	        SELECT
+        	            e.employee_id,
+        	            e.employee_code,
+        	            e.first_name,
+        	            e.middle_name,
+        	            e.last_name,
+        	            e.department_id,
+        	            e.factory_id
+        	        FROM master.employee e
+        	        WHERE e.record_status = 'A'
+        	          AND e.organization_id = ?
+        	          AND (? IS NULL OR e.factory_id = ?)
+        	    ),
+        	    latest_session AS (
+        	        SELECT
+        	            e.employee_id,
+        	            s.assessment_session_id,
+        	            s.assessment_template_id,
+        	            s.assigned_on,
+        	            s.percentage,
+        	            s.assessment_status_id
+        	        FROM dashboard_employees e
+        	        LEFT JOIN LATERAL (
+        	            SELECT
+        	                s1.assessment_session_id,
+        	                s1.assessment_template_id,
+        	                s1.assigned_on,
+        	                s1.percentage,
+        	                s1.assessment_status_id
+        	            FROM assessment.assessment_session s1
+        	            WHERE s1.employee_id = e.employee_id
+        	            ORDER BY
+        	                s1.assigned_on DESC NULLS LAST,
+        	                s1.assessment_session_id DESC
+        	            LIMIT 1
+        	        ) s ON TRUE
+        	    ),
+        	    latest_module_attempt AS (
+        	        SELECT
+        	            aa.assessment_session_id,
+        	            ami.assessment_module_id,
+        	            ami.module_status_id,
+        	            ROW_NUMBER() OVER (
+        	                PARTITION BY
+        	                    aa.assessment_session_id,
+        	                    ami.assessment_module_id
+        	                ORDER BY
+        	                    ami.started_on DESC NULLS LAST,
+        	                    ami.assessment_module_instance_id DESC
+        	            ) AS rn
+        	        FROM assessment.assessment_attempt aa
+        	        JOIN assessment.assessment_module_instance ami
+        	            ON ami.assessment_attempt_id = aa.assessment_attempt_id
+        	    ),
+        	    module_counts AS (
+        	        SELECT
+        	            s.assessment_session_id,
+        	            COUNT(DISTINCT atm.assessment_module_id) AS total_modules,
+        	            COUNT(DISTINCT lma.assessment_module_id)
+        	                FILTER (
+        	                    WHERE ms.status_code = 'COMPLETED'
+        	                ) AS completed_modules
+        	        FROM latest_session s
+        	        LEFT JOIN config.assessment_template_module atm
+        	            ON atm.assessment_template_id = s.assessment_template_id
+        	        LEFT JOIN latest_module_attempt lma
+        	            ON lma.assessment_session_id = s.assessment_session_id
+        	           AND lma.assessment_module_id = atm.assessment_module_id
+        	           AND lma.rn = 1
+        	        LEFT JOIN assessment.module_status ms
+        	            ON ms.module_status_id = lma.module_status_id
+        	        WHERE s.assessment_session_id IS NOT NULL
+        	        GROUP BY s.assessment_session_id
+        	    ),
+        	    report_data AS (
+        	        SELECT
+        	            s.assessment_session_id AS "sessionId",
+        	            e.employee_id AS "employeeId",
+        	            e.employee_code AS "empCode",
+        	            CONCAT_WS(
+        	                ' ',
+        	                NULLIF(TRIM(e.first_name), ''),
+        	                NULLIF(TRIM(e.middle_name), ''),
+        	                NULLIF(TRIM(e.last_name), '')
+        	            ) AS employee,
+        	            d.department_name AS department,
+        	            f.factory_name AS factory,
 
-            latest_session AS (
-                SELECT
-                    e.employee_id,
-                    s.assessment_session_id,
-                    s.assessment_template_id,
-                    s.assigned_on,
-                    s.percentage,
-                    s.assessment_status_id
-                FROM dashboard_employees e
+        	            CASE
+        	                WHEN s.assessment_session_id IS NULL
+        	                    THEN '0/4'
+        	                ELSE CONCAT(
+        	                    COALESCE(mc.completed_modules, 0),
+        	                    '/',
+        	                    COALESCE(mc.total_modules, 0)
+        	                )
+        	            END AS assessment,
 
-                LEFT JOIN LATERAL (
-                    SELECT
-                        s1.assessment_session_id,
-                        s1.assessment_template_id,
-                        s1.assigned_on,
-                        s1.percentage,
-                        s1.assessment_status_id
-                    FROM assessment.assessment_session s1
-                    WHERE s1.employee_id = e.employee_id
-                    ORDER BY
-                        s1.assigned_on DESC NULLS LAST,
-                        s1.assessment_session_id DESC
-                    LIMIT 1
-                ) s ON TRUE
-            ),
+        	            CASE
+        	                WHEN s.assessment_session_id IS NULL
+        	                    THEN '0%'
+        	                ELSE CONCAT(
+        	                    ROUND(
+        	                        COALESCE(
+        	                            fs.percentage,
+        	                            s.percentage,
+        	                            0
+        	                        )::numeric,
+        	                        0
+        	                    ),
+        	                    '%'
+        	                )
+        	            END AS "overallScore",
 
-            report_data AS (
-                SELECT
-                    s.assessment_session_id AS "sessionId",
-                    e.employee_id AS "employeeId",
-                    e.employee_code AS "empCode",
+        	            COALESCE(
+        	                fs.overall_result,
+        	                aa.result,
+        	                'N/A'
+        	            ) AS result,
 
-                    CONCAT_WS(
-                        ' ',
-                        NULLIF(TRIM(e.first_name), ''),
-                        NULLIF(TRIM(e.middle_name), ''),
-                        NULLIF(TRIM(e.last_name), '')
-                    ) AS employee,
+        	            s.assigned_on AS "assignedOn"
 
-                    d.department_name AS department,
-                    f.factory_name AS factory,
+        	        FROM latest_session s
+        	        JOIN dashboard_employees e
+        	            ON e.employee_id = s.employee_id
+        	        LEFT JOIN master.department d
+        	            ON d.department_id = e.department_id
+        	        LEFT JOIN master.factory f
+        	            ON f.factory_id = e.factory_id
+        	        LEFT JOIN assessment.assessment_attempt aa
+        	            ON aa.assessment_session_id = s.assessment_session_id
+        	        LEFT JOIN assessment.final_score fs
+        	            ON fs.assessment_session_id = s.assessment_session_id
+        	        LEFT JOIN module_counts mc
+        	            ON mc.assessment_session_id = s.assessment_session_id
 
-                    CASE
-                        WHEN s.assessment_session_id IS NULL
-                            THEN '0/0'
-                        ELSE CONCAT(
-                            COUNT(*) FILTER (
-                                WHERE ms.status_code = 'COMPLETED'
-                            ),
-                            '/',
-                            COUNT(
-                                ami.assessment_module_instance_id
-                            )
-                        )
-                    END AS assessment,
-
-                    CASE
-                        WHEN s.assessment_session_id IS NULL
-                            THEN '0%'
-                        ELSE CONCAT(
-                            ROUND(
-                                COALESCE(
-                                    fs.percentage,
-                                    s.percentage,
-                                    0
-                                )::numeric,
-                                0
-                            ),
-                            '%'
-                        )
-                    END AS "overallScore",
-
-                    COALESCE(
-                        fs.overall_result,
-                        aa.result,
-                        'N/A'
-                    ) AS result,
-
-                    s.assigned_on AS "assignedOn"
-
-                FROM latest_session s
-
-                JOIN dashboard_employees e
-                    ON e.employee_id = s.employee_id
-
-                LEFT JOIN master.department d
-                    ON d.department_id = e.department_id
-
-                LEFT JOIN master.factory f
-                    ON f.factory_id = e.factory_id
-
-                LEFT JOIN assessment.assessment_attempt aa
-                    ON aa.assessment_session_id =
-                       s.assessment_session_id
-
-                LEFT JOIN assessment.assessment_module_instance ami
-                    ON ami.assessment_attempt_id =
-                       aa.assessment_attempt_id
-
-                LEFT JOIN assessment.module_status ms
-                    ON ms.module_status_id =
-                       ami.module_status_id
-
-                LEFT JOIN assessment.final_score fs
-                    ON fs.assessment_session_id =
-                       s.assessment_session_id
-
-                GROUP BY
-                    s.assessment_session_id,
-                    e.employee_id,
-                    e.employee_code,
-                    e.first_name,
-                    e.middle_name,
-                    e.last_name,
-                    d.department_name,
-                    f.factory_name,
-                    fs.percentage,
-                    s.percentage,
-                    fs.overall_result,
-                    aa.result,
-                    s.assigned_on
-            )
-
-            SELECT
-                report_data.*,
-                COUNT(*) OVER() AS "totalElements"
-            FROM report_data
-            ORDER BY
-                "assignedOn" DESC NULLS LAST,
-                "employeeId"
-            LIMIT ? OFFSET ?
-            """;
+        	        GROUP BY
+        	            s.assessment_session_id,
+        	            e.employee_id,
+        	            e.employee_code,
+        	            e.first_name,
+        	            e.middle_name,
+        	            e.last_name,
+        	            d.department_name,
+        	            f.factory_name,
+        	            fs.percentage,
+        	            s.percentage,
+        	            fs.overall_result,
+        	            aa.result,
+        	            s.assigned_on,
+        	            mc.completed_modules,
+        	            mc.total_modules
+        	    )
+        	    SELECT
+        	        report_data.*,
+        	        COUNT(*) OVER() AS "totalElements"
+        	    FROM report_data
+        	    ORDER BY
+        	        "assignedOn" DESC NULLS LAST,
+        	        "employeeId"
+        	    LIMIT ? OFFSET ?
+        	    """;
 
         log.debug(
                 "Fetching assessor report: organizationId={}, " +

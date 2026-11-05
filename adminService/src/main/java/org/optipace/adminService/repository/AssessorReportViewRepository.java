@@ -1,3 +1,4 @@
+
 package org.optipace.adminService.repository;
 
 import lombok.RequiredArgsConstructor;
@@ -15,7 +16,8 @@ public class AssessorReportViewRepository {
     private final JdbcTemplate jdbcTemplate;
 
     /**
-     * Find the latest assessment session using the unique employee code.
+     * Find the latest assessment session using employee code.
+     * Returns null when no assessment session exists.
      */
     public UUID getLatestSessionIdByEmpCode(String empCode) {
 
@@ -39,22 +41,64 @@ public class AssessorReportViewRepository {
                 empCode
         );
 
-        if (sessionIds.isEmpty()) {
-            throw new IllegalArgumentException(
-                    "No assessment session found for employee code: "
-                            + empCode);
-        }
-
-        return sessionIds.get(0);
+        return sessionIds.isEmpty() ? null : sessionIds.get(0);
     }
 
     /**
-     * Fetch employee summary and assessment statistics.
+     * Check whether an active employee exists.
+     */
+    public boolean employeeExists(String empCode) {
+
+        String sql = """
+            SELECT EXISTS (
+                SELECT 1
+                FROM master.employee
+                WHERE employee_code = ?
+                  AND record_status = 'A'
+            )
+            """;
+
+        Boolean exists = jdbcTemplate.queryForObject(
+                sql,
+                Boolean.class,
+                empCode
+        );
+
+        return Boolean.TRUE.equals(exists);
+    }
+
+    /**
+     * Fetch employee summary using the latest result
+     * of each assessment module.
      */
     public Map<String, Object> getAssessmentSummaryBySessionId(
             UUID sessionId) {
 
         String sql = """
+            WITH ranked_modules AS (
+                SELECT
+                    ami.*,
+                    ms.status_code,
+                    ROW_NUMBER() OVER (
+                        PARTITION BY ami.assessment_module_id
+                        ORDER BY
+                            ami.started_on DESC NULLS LAST,
+                            ami.assessment_module_instance_id DESC
+                    ) AS rn
+                FROM assessment.assessment_attempt aa
+                JOIN assessment.assessment_module_instance ami
+                    ON aa.assessment_attempt_id =
+                       ami.assessment_attempt_id
+                LEFT JOIN assessment.module_status ms
+                    ON ami.module_status_id =
+                       ms.module_status_id
+                WHERE aa.assessment_session_id = ?
+            ),
+            latest_modules AS (
+                SELECT *
+                FROM ranked_modules
+                WHERE rn = 1
+            )
             SELECT
                 CONCAT_WS(
                     ' ',
@@ -64,7 +108,9 @@ public class AssessorReportViewRepository {
                 ) AS "employeeName",
 
                 e.employee_code AS "employeeCode",
+
                 d.department_name AS "departmentName",
+
                 f.factory_name AS "factoryName",
 
                 ROUND(
@@ -72,24 +118,24 @@ public class AssessorReportViewRepository {
                     0
                 ) AS "overallScore",
 
-                COUNT(DISTINCT ami.assessment_module_instance_id)
+                COUNT(lm.assessment_module_instance_id)
                     AS "totalModules",
 
-                COUNT(DISTINCT ami.assessment_module_instance_id)
+                COUNT(lm.assessment_module_instance_id)
                     FILTER (
-                        WHERE ms.status_code = 'COMPLETED'
+                        WHERE lm.status_code = 'COMPLETED'
                     ) AS "completedModules",
 
-                COUNT(DISTINCT ami.assessment_module_instance_id)
+                COUNT(lm.assessment_module_instance_id)
                     FILTER (
-                        WHERE ms.status_code = 'COMPLETED'
-                          AND ami.percentage >= t.pass_percentage
+                        WHERE lm.status_code = 'COMPLETED'
+                          AND lm.percentage >= t.pass_percentage
                     ) AS "passedCount",
 
-                COUNT(DISTINCT ami.assessment_module_instance_id)
+                COUNT(lm.assessment_module_instance_id)
                     FILTER (
-                        WHERE ms.status_code = 'COMPLETED'
-                          AND ami.percentage < t.pass_percentage
+                        WHERE lm.status_code = 'COMPLETED'
+                          AND lm.percentage < t.pass_percentage
                     ) AS "failedCount"
 
             FROM assessment.assessment_session s
@@ -107,17 +153,8 @@ public class AssessorReportViewRepository {
                 ON s.assessment_template_id =
                    t.assessment_template_id
 
-            LEFT JOIN assessment.assessment_attempt aa
-                ON s.assessment_session_id =
-                   aa.assessment_session_id
-
-            LEFT JOIN assessment.assessment_module_instance ami
-                ON aa.assessment_attempt_id =
-                   ami.assessment_attempt_id
-
-            LEFT JOIN assessment.module_status ms
-                ON ami.module_status_id =
-                   ms.module_status_id
+            LEFT JOIN latest_modules lm
+                ON TRUE
 
             LEFT JOIN assessment.final_score fs
                 ON s.assessment_session_id =
@@ -137,73 +174,90 @@ public class AssessorReportViewRepository {
                 t.pass_percentage
             """;
 
-        return jdbcTemplate.queryForMap(sql, sessionId);
+        return jdbcTemplate.queryForMap(sql, sessionId, sessionId);
     }
 
     /**
-     * Fetch the test-by-test breakdown for an assessment session.
+     * Fetch only the latest test result for each module.
      */
     public List<Map<String, Object>> getAssessmentDetailsBySessionId(
             UUID sessionId) {
 
         String sql = """
+            WITH ranked_modules AS (
+                SELECT
+                    ami.*,
+                    ms.status_code,
+                    ROW_NUMBER() OVER (
+                        PARTITION BY ami.assessment_module_id
+                        ORDER BY
+                            ami.started_on DESC NULLS LAST,
+                            ami.assessment_module_instance_id DESC
+                    ) AS rn
+                FROM assessment.assessment_attempt aa
+                JOIN assessment.assessment_module_instance ami
+                    ON aa.assessment_attempt_id =
+                       ami.assessment_attempt_id
+                LEFT JOIN assessment.module_status ms
+                    ON ami.module_status_id =
+                       ms.module_status_id
+                WHERE aa.assessment_session_id = ?
+            )
             SELECT
-                ami.assessment_module_id AS "moduleId",
+                lm.assessment_module_id AS "moduleId",
+
                 am.module_name AS "testName",
-                ami.started_on::text AS "testDate",
+
+                lm.started_on::text AS "testDate",
 
                 ROUND(
-                    COALESCE(ami.obtained_score, 0)::numeric,
+                    COALESCE(lm.obtained_score, 0)::numeric,
                     0
                 ) AS "obtainedScore",
 
                 ROUND(
-                    COALESCE(ami.maximum_score, 0)::numeric,
+                    COALESCE(lm.maximum_score, 0)::numeric,
                     0
                 ) AS "totalScore",
 
                 ROUND(
-                    COALESCE(ami.percentage, 0)::numeric,
+                    COALESCE(lm.percentage, 0)::numeric,
                     0
                 ) AS "percentage",
 
-                COALESCE(ms.status_code, 'PENDING')
+                COALESCE(lm.status_code, 'PENDING')
                     AS "moduleStatus",
 
                 CASE
-                    WHEN ms.status_code = 'COMPLETED'
-                         AND ami.percentage >= t.pass_percentage
+                    WHEN lm.status_code = 'COMPLETED'
+                         AND lm.percentage >= t.pass_percentage
                         THEN 'Passed'
 
-                    WHEN ms.status_code = 'COMPLETED'
+                    WHEN lm.status_code = 'COMPLETED'
                         THEN 'Failed'
 
                     ELSE 'Pending'
                 END AS "result"
 
-            FROM assessment.assessment_session s
+            FROM ranked_modules lm
+
+            JOIN config.assessment_module am
+                ON lm.assessment_module_id =
+                   am.assessment_module_id
+
+            JOIN assessment.assessment_attempt aa
+                ON lm.assessment_attempt_id =
+                   aa.assessment_attempt_id
+
+            JOIN assessment.assessment_session s
+                ON aa.assessment_session_id =
+                   s.assessment_session_id
 
             JOIN config.assessment_template t
                 ON s.assessment_template_id =
                    t.assessment_template_id
 
-            JOIN assessment.assessment_attempt aa
-                ON s.assessment_session_id =
-                   aa.assessment_session_id
-
-            JOIN assessment.assessment_module_instance ami
-                ON aa.assessment_attempt_id =
-                   ami.assessment_attempt_id
-
-            JOIN config.assessment_module am
-                ON ami.assessment_module_id =
-                   am.assessment_module_id
-
-            LEFT JOIN assessment.module_status ms
-                ON ami.module_status_id =
-                   ms.module_status_id
-
-            WHERE s.assessment_session_id = ?
+            WHERE lm.rn = 1
 
             ORDER BY am.display_order
             """;
