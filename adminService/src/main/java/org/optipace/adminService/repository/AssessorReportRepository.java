@@ -132,7 +132,7 @@ public class AssessorReportRepository {
 
         	            CASE
         	                WHEN s.assessment_session_id IS NULL
-        	                    THEN '0/5'
+        	                    THEN '0/4'
         	                ELSE CONCAT(
         	                    COALESCE(mc.completed_modules, 0),
         	                    '/',
