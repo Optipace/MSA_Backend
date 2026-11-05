@@ -1,5 +1,6 @@
 package org.optipace.garmentService.dto.response;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -13,5 +14,5 @@ public class ListOfBatchResponse {
     private String batchName;
     private String batchCode;
     private Integer displayOrder;
-    private boolean isGarmentFound;
+    private boolean garmentFound;
 }
