@@ -7,6 +7,7 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -23,60 +24,72 @@ public class DashboardRepositoryImpl implements DashboardRepository {
             Long factoryId) {
 
         Object[] row = (Object[]) entityManager.createNativeQuery("""
-            SELECT
-                (
-                    SELECT COUNT(DISTINCT e.employee_id)
-                    FROM master.employee e
-                    WHERE e.organization_id = :organisationId
-                      AND e.factory_id = :factoryId
-                ) AS total_employees_assessed,
+        SELECT
+            (
+                SELECT COUNT(DISTINCT e.employee_id)
+                FROM master.employee e
+                INNER JOIN assessment.assessment_session s
+                    ON s.employee_id = e.employee_id
+                WHERE e.organization_id = :organisationId
+                  AND e.factory_id = :factoryId
+                  AND e.record_status = 'A'
+                  AND s.record_status = 'A'
+            ) AS total_employees_assessed,
 
-                (
-                    SELECT COUNT(*)
-                    FROM assessment.assessment_session s
-                    JOIN master.employee e
-                      ON e.employee_id = s.employee_id
-                    WHERE e.organization_id = :organisationId
-                      AND e.factory_id = :factoryId
-                      AND s.assessment_status_id = 3
-                ) AS tests_taken,
+            (
+                SELECT COUNT(DISTINCT s.assessment_session_id)
+                FROM assessment.assessment_session s
+                INNER JOIN master.employee e
+                    ON e.employee_id = s.employee_id
+                WHERE e.organization_id = :organisationId
+                  AND e.factory_id = :factoryId
+                  AND e.record_status = 'A'
+                  AND s.record_status = 'A'
+                  AND s.assessment_status_id = 3
+            ) AS tests_taken,
 
-                (
-                    SELECT COUNT(*)
-                    FROM assessment.assessment_session s
-                    JOIN master.employee e
-                      ON e.employee_id = s.employee_id
-                    WHERE e.organization_id = :organisationId
-                      AND e.factory_id = :factoryId
-                      AND s.assessment_status_id IN (1, 2)
-                ) AS tests_pending,
+            (
+                SELECT COUNT(DISTINCT s.assessment_session_id)
+                FROM assessment.assessment_session s
+                INNER JOIN master.employee e
+                    ON e.employee_id = s.employee_id
+                WHERE e.organization_id = :organisationId
+                  AND e.factory_id = :factoryId
+                  AND e.record_status = 'A'
+                  AND s.record_status = 'A'
+                  AND s.assessment_status_id IN (1, 2)
+            ) AS tests_pending,
 
-                (
-                    SELECT COUNT(*)
-                    FROM assessment.final_score fs
-                    JOIN assessment.assessment_session s
-                      ON s.assessment_session_id =
-                         fs.assessment_session_id
-                    JOIN master.employee e
-                      ON e.employee_id = s.employee_id
-                    WHERE e.organization_id = :organisationId
-                      AND e.factory_id = :factoryId
-                      AND fs.overall_result = 'FAIL'
-                ) AS tests_failed,
+            (
+                SELECT COUNT(DISTINCT fs.assessment_session_id)
+                FROM assessment.final_score fs
+                INNER JOIN assessment.assessment_session s
+                    ON s.assessment_session_id =
+                       fs.assessment_session_id
+                INNER JOIN master.employee e
+                    ON e.employee_id = s.employee_id
+                WHERE e.organization_id = :organisationId
+                  AND e.factory_id = :factoryId
+                  AND e.record_status = 'A'
+                  AND s.record_status = 'A'
+                  AND fs.overall_result = 'FAIL'
+            ) AS tests_failed,
 
-                (
-                    SELECT COUNT(*)
-                    FROM assessment.final_score fs
-                    JOIN assessment.assessment_session s
-                      ON s.assessment_session_id =
-                         fs.assessment_session_id
-                    JOIN master.employee e
-                      ON e.employee_id = s.employee_id
-                    WHERE e.organization_id = :organisationId
-                      AND e.factory_id = :factoryId
-                      AND fs.overall_result = 'PASS'
-                ) AS good_performance
-            """)
+            (
+                SELECT COUNT(DISTINCT fs.assessment_session_id)
+                FROM assessment.final_score fs
+                INNER JOIN assessment.assessment_session s
+                    ON s.assessment_session_id =
+                       fs.assessment_session_id
+                INNER JOIN master.employee e
+                    ON e.employee_id = s.employee_id
+                WHERE e.organization_id = :organisationId
+                  AND e.factory_id = :factoryId
+                  AND e.record_status = 'A'
+                  AND s.record_status = 'A'
+                  AND fs.overall_result = 'PASS'
+            ) AS good_performance
+        """)
                 .setParameter("organisationId", organisationId)
                 .setParameter("factoryId", factoryId)
                 .getSingleResult();
@@ -109,8 +122,6 @@ public class DashboardRepositoryImpl implements DashboardRepository {
             }
         };
     }
-
-
     @Override
     public List<RecentAssessmentResponse> getRecentCompletedAssessments(
             int page,
@@ -121,35 +132,85 @@ public class DashboardRepositoryImpl implements DashboardRepository {
         int offset = page * size;
 
         List<Object[]> rows = entityManager.createNativeQuery("""
-                    SELECT
-                        e.employee_code,
-                        CONCAT_WS(' ', e.first_name, e.middle_name, e.last_name),
-                        d.department_name,
-                        am.module_name,
-                        s.total_score,
-                        ast.status_name,
-                        s.completed_on
-                    FROM assessment.assessment_session s
-                    JOIN assessment.assessment_status ast
-                        ON s.assessment_status_id = ast.assessment_status_id
-                    JOIN master.employee e
-                        ON s.employee_id = e.employee_id
-                    JOIN master.department d
-                        ON e.department_id = d.department_id
-                    LEFT JOIN assessment.assessment_attempt aa
-                        ON aa.assessment_session_id = s.assessment_session_id
-                    LEFT JOIN assessment.assessment_module_instance ami
-                        ON ami.assessment_attempt_id = aa.assessment_attempt_id
-                    LEFT JOIN config.assessment_module am
-                        ON am.assessment_module_id = ami.assessment_module_id
-                    WHERE ast.status_code = 'COMPLETED'
-                      AND s.completed_on IS NOT NULL
-                      AND e.organization_id = :organisationId
-                      AND e.factory_id = :factoryId
-                    ORDER BY s.completed_on DESC,
-                             s.assessment_session_id DESC
-                    LIMIT :size OFFSET :offset
-                    """)
+        WITH ranked_module_scores AS (
+            SELECT
+                ms.module_score_id,
+                ms.assessment_module_instance_id,
+                ms.percentage,
+                ms.calculated_on,
+
+                ROW_NUMBER() OVER (
+                    PARTITION BY ms.assessment_module_instance_id
+                    ORDER BY
+                        ms.calculated_on DESC NULLS LAST,
+                        ms.module_score_id DESC
+                ) AS score_rn
+
+            FROM assessment.module_score ms
+        )
+
+        SELECT
+            e.employee_code,
+
+            CONCAT_WS(
+                ' ',
+                e.first_name,
+                e.middle_name,
+                e.last_name
+            ) AS employee_name,
+
+            d.department_name,
+            am.module_name,
+
+            rms.percentage AS total_score,
+
+            ast.status_name,
+            s.completed_on
+
+        FROM assessment.assessment_session s
+
+        INNER JOIN assessment.assessment_status ast
+            ON ast.assessment_status_id =
+               s.assessment_status_id
+
+        INNER JOIN master.employee e
+            ON e.employee_id = s.employee_id
+
+        LEFT JOIN master.department d
+            ON d.department_id = e.department_id
+
+        INNER JOIN assessment.assessment_attempt aa
+            ON aa.assessment_session_id =
+               s.assessment_session_id
+
+        INNER JOIN assessment.assessment_module_instance ami
+            ON ami.assessment_attempt_id =
+               aa.assessment_attempt_id
+
+        INNER JOIN config.assessment_module am
+            ON am.assessment_module_id =
+               ami.assessment_module_id
+
+        INNER JOIN ranked_module_scores rms
+            ON rms.assessment_module_instance_id =
+               ami.assessment_module_instance_id
+           AND rms.score_rn = 1
+
+        WHERE ast.status_code = 'COMPLETED'
+          AND s.completed_on IS NOT NULL
+          AND s.record_status = 'A'
+          AND e.record_status = 'A'
+          AND ami.is_deleted = FALSE
+          AND e.organization_id = :organisationId
+          AND e.factory_id = :factoryId
+
+        ORDER BY
+            s.completed_on DESC,
+            ami.completed_on DESC NULLS LAST,
+            s.assessment_session_id DESC
+
+        LIMIT :size OFFSET :offset
+        """)
                 .setParameter("organisationId", organisationId)
                 .setParameter("factoryId", factoryId)
                 .setParameter("size", size)
@@ -162,7 +223,8 @@ public class DashboardRepositoryImpl implements DashboardRepository {
                         row[1] == null ? null : row[1].toString(),
                         row[2] == null ? null : row[2].toString(),
                         row[3] == null ? null : row[3].toString(),
-                        row[4] == null ? null
+                        row[4] == null
+                                ? null
                                 : new java.math.BigDecimal(row[4].toString()),
                         row[5] == null ? null : row[5].toString(),
                         row[6] == null ? null : row[6].toString()
@@ -177,17 +239,54 @@ public class DashboardRepositoryImpl implements DashboardRepository {
             Long factoryId) {
 
         Number result = (Number) entityManager.createNativeQuery("""
-                    SELECT COUNT(DISTINCT s.assessment_session_id)
-                    FROM assessment.assessment_session s
-                    JOIN assessment.assessment_status ast
-                        ON s.assessment_status_id = ast.assessment_status_id
-                    JOIN master.employee e
-                        ON s.employee_id = e.employee_id
-                    WHERE ast.status_code = 'COMPLETED'
-                      AND s.completed_on IS NOT NULL
-                      AND e.organization_id = :organisationId
-                      AND e.factory_id = :factoryId
-                    """)
+        WITH ranked_module_scores AS (
+            SELECT
+                ms.module_score_id,
+                ms.assessment_module_instance_id,
+                ms.calculated_on,
+
+                ROW_NUMBER() OVER (
+                    PARTITION BY ms.assessment_module_instance_id
+                    ORDER BY
+                        ms.calculated_on DESC NULLS LAST,
+                        ms.module_score_id DESC
+                ) AS score_rn
+
+            FROM assessment.module_score ms
+        )
+
+        SELECT COUNT(*)
+
+        FROM assessment.assessment_session s
+
+        INNER JOIN assessment.assessment_status ast
+            ON ast.assessment_status_id =
+               s.assessment_status_id
+
+        INNER JOIN master.employee e
+            ON e.employee_id = s.employee_id
+
+        INNER JOIN assessment.assessment_attempt aa
+            ON aa.assessment_session_id =
+               s.assessment_session_id
+
+        INNER JOIN assessment.assessment_module_instance ami
+            ON ami.assessment_attempt_id =
+               aa.assessment_attempt_id
+
+        INNER JOIN ranked_module_scores rms
+            ON rms.assessment_module_instance_id =
+               ami.assessment_module_instance_id
+           AND rms.score_rn = 1
+
+        WHERE ast.status_code = 'COMPLETED'
+          AND s.completed_on IS NOT NULL
+          AND s.record_status = 'A'
+          AND e.record_status = 'A'
+          AND ami.is_deleted = FALSE
+          AND e.organization_id = :organisationId
+          AND e.factory_id = :factoryId
+        """)
                 .setParameter("organisationId", organisationId)
                 .setParameter("factoryId", factoryId)
                 .getSingleResult();
@@ -203,32 +302,82 @@ public class DashboardRepositoryImpl implements DashboardRepository {
             Long factoryId) {
 
         List<Object[]> rows = entityManager.createNativeQuery("""
+        WITH ranked_final_scores AS (
+
+            -- Step 1: Select the latest final score for each session
             SELECT
-                cr.competency_rating_id,
-                cr.rating_code,
-                cr.rating_name,
-                cr.color_code,
-                COUNT(DISTINCT ases.employee_id)
+                fs.assessment_session_id,
+                fs.competency_rating_id,
+
+                ROW_NUMBER() OVER (
+                    PARTITION BY fs.assessment_session_id
+                    ORDER BY
+                        fs.calculated_on DESC,
+                        fs.final_score_id DESC
+                ) AS score_rn
+
+            FROM assessment.final_score fs
+
+            WHERE fs.competency_rating_id IS NOT NULL
+        ),
+
+        ranked_sessions AS (
+
+            -- Step 2: Select the latest eligible session for each employee
+            SELECT
+                ases.assessment_session_id,
+                ases.employee_id,
+                rfs.competency_rating_id,
+
+                ROW_NUMBER() OVER (
+                    PARTITION BY ases.employee_id
+                    ORDER BY
+                        ases.completed_on DESC NULLS LAST,
+                        ases.created_on DESC,
+                        ases.assessment_session_id DESC
+                ) AS rn
+
             FROM assessment.assessment_session ases
+
             INNER JOIN master.employee e
                 ON e.employee_id = ases.employee_id
-            INNER JOIN assessment.final_score fs
-                ON fs.assessment_session_id = ases.assessment_session_id
-            INNER JOIN config.competency_rating cr
-                ON cr.competency_rating_id = fs.competency_rating_id
-            WHERE fs.competency_rating_id IS NOT NULL
+
+            INNER JOIN ranked_final_scores rfs
+                ON rfs.assessment_session_id = ases.assessment_session_id
+               AND rfs.score_rn = 1
+
+            WHERE ases.record_status = 'A'
+              AND e.record_status = 'A'
               AND e.organization_id = :organisationId
               AND e.factory_id = :factoryId
-            GROUP BY
-                cr.competency_rating_id,
-                cr.rating_code,
-                cr.rating_name,
-                cr.color_code,
-                cr.display_order
-            ORDER BY
-                cr.display_order NULLS LAST,
-                cr.competency_rating_id
-            """)
+        )
+
+        -- Step 3: Group employees by competency rating
+        SELECT
+            cr.competency_rating_id,
+            cr.rating_code,
+            cr.rating_name,
+            cr.color_code,
+            COUNT(rs.employee_id) AS employee_count
+
+        FROM ranked_sessions rs
+
+        INNER JOIN config.competency_rating cr
+            ON cr.competency_rating_id = rs.competency_rating_id
+
+        WHERE rs.rn = 1
+
+        GROUP BY
+            cr.competency_rating_id,
+            cr.rating_code,
+            cr.rating_name,
+            cr.color_code,
+            cr.display_order
+
+        ORDER BY
+            cr.display_order NULLS LAST,
+            cr.competency_rating_id
+        """)
                 .setParameter("organisationId", organisationId)
                 .setParameter("factoryId", factoryId)
                 .getResultList();
@@ -240,7 +389,8 @@ public class DashboardRepositoryImpl implements DashboardRepository {
                             @Override
                             public Long getCompetencyRatingId() {
                                 return row[0] == null
-                                        ? null : ((Number) row[0]).longValue();
+                                        ? null
+                                        : ((Number) row[0]).longValue();
                             }
 
                             @Override
@@ -264,7 +414,8 @@ public class DashboardRepositoryImpl implements DashboardRepository {
                             @Override
                             public Long getEmployeeCount() {
                                 return row[4] == null
-                                        ? 0L : ((Number) row[4]).longValue();
+                                        ? 0L
+                                        : ((Number) row[4]).longValue();
                             }
                         })
                 .toList();
@@ -304,46 +455,84 @@ public class DashboardRepositoryImpl implements DashboardRepository {
             Long factoryId) {
 
         List<Object[]> rows = entityManager.createNativeQuery("""
-            WITH months AS (
-                SELECT generate_series(
-                    date_trunc('month', CAST(:startDate AS date)),
-                    date_trunc('month', CAST(:endDate AS date)),
-                    INTERVAL '1 month'
-                ) AS month_start
-            ),
-            monthly_scores AS (
-                SELECT
-                    date_trunc('month', s.completed_on) AS month_start,
-                    AVG(fs.percentage) AS average_score
-                FROM assessment.final_score fs
-                INNER JOIN assessment.assessment_session s
-                    ON s.assessment_session_id =
-                       fs.assessment_session_id
-                INNER JOIN assessment.assessment_status ast
-                    ON ast.assessment_status_id =
-                       s.assessment_status_id
-                INNER JOIN master.employee e
-                    ON e.employee_id = s.employee_id
-                WHERE ast.status_code = 'COMPLETED'
-                  AND s.completed_on IS NOT NULL
-                  AND fs.percentage IS NOT NULL
-                  AND s.completed_on >= CAST(:startDate AS date)
-                  AND s.completed_on <
-                      CAST(:endDate AS date) + INTERVAL '1 day'
-                  AND e.organization_id = :organisationId
-                  AND e.factory_id = :factoryId
-                GROUP BY date_trunc('month', s.completed_on)
-            )
+        WITH months AS (
+
+            -- Step 1: Generate all months between start date and end date
+            SELECT generate_series(
+                date_trunc('month', CAST(:startDate AS date)),
+                date_trunc('month', CAST(:endDate AS date)),
+                INTERVAL '1 month'
+            ) AS month_start
+        ),
+
+        ranked_final_scores AS (
+
+            -- Step 2: Select the latest calculated final score
+            -- for each assessment session
             SELECT
-                EXTRACT(YEAR FROM m.month_start),
-                EXTRACT(MONTH FROM m.month_start),
-                TO_CHAR(m.month_start, 'Mon YYYY'),
-                ms.average_score
-            FROM months m
-            LEFT JOIN monthly_scores ms
-                ON ms.month_start = m.month_start
-            ORDER BY m.month_start
-            """)
+                fs.assessment_session_id,
+                fs.percentage,
+
+                ROW_NUMBER() OVER (
+                    PARTITION BY fs.assessment_session_id
+                    ORDER BY
+                        fs.calculated_on DESC NULLS LAST,
+                        fs.final_score_id DESC
+                ) AS score_rn
+
+            FROM assessment.final_score fs
+        ),
+
+        monthly_scores AS (
+
+            -- Step 3: Calculate average score for each month
+            SELECT
+                date_trunc('month', s.completed_on) AS month_start,
+                AVG(rfs.percentage) AS average_score
+
+            FROM assessment.assessment_session s
+
+            INNER JOIN assessment.assessment_status ast
+                ON ast.assessment_status_id = s.assessment_status_id
+
+            INNER JOIN master.employee e
+                ON e.employee_id = s.employee_id
+
+            INNER JOIN ranked_final_scores rfs
+                ON rfs.assessment_session_id = s.assessment_session_id
+               AND rfs.score_rn = 1
+
+            WHERE ast.status_code = 'COMPLETED'
+              AND s.record_status = 'A'
+              AND e.record_status = 'A'
+              AND s.completed_on IS NOT NULL
+              AND rfs.percentage IS NOT NULL
+
+              AND s.completed_on >= CAST(:startDate AS date)
+              AND s.completed_on < (
+                  CAST(:endDate AS date) + INTERVAL '1 day'
+              )
+
+              AND e.organization_id = :organisationId
+              AND e.factory_id = :factoryId
+
+            GROUP BY date_trunc('month', s.completed_on)
+        )
+
+        -- Step 4: Return all months, including months without assessments
+        SELECT
+            EXTRACT(YEAR FROM m.month_start),
+            EXTRACT(MONTH FROM m.month_start),
+            TO_CHAR(m.month_start, 'Mon YYYY'),
+            ms.average_score
+
+        FROM months m
+
+        LEFT JOIN monthly_scores ms
+            ON ms.month_start = m.month_start
+
+        ORDER BY m.month_start
+        """)
                 .setParameter("startDate", startDate)
                 .setParameter("endDate", endDate)
                 .setParameter("organisationId", organisationId)
@@ -353,20 +542,21 @@ public class DashboardRepositoryImpl implements DashboardRepository {
         return rows.stream()
                 .map(row -> new MsaTrendPointResponse(
                         row[0] == null
-                                ? null : ((Number) row[0]).intValue(),
+                                ? null
+                                : ((Number) row[0]).intValue(),
 
                         row[1] == null
-                                ? null : ((Number) row[1]).intValue(),
+                                ? null
+                                : ((Number) row[1]).intValue(),
 
                         row[2] == null
-                                ? null : row[2].toString(),
+                                ? null
+                                : row[2].toString(),
 
                         row[3] == null
                                 ? null
-                                : new java.math.BigDecimal(row[3].toString())
-                                  .setScale(
-                                          2,
-                                          java.math.RoundingMode.HALF_UP)
+                                : new BigDecimal(row[3].toString())
+                                  .setScale(2, RoundingMode.HALF_UP)
                 ))
                 .toList();
     }
@@ -599,39 +789,96 @@ public class DashboardRepositoryImpl implements DashboardRepository {
             Long factoryId) {
 
         return entityManager.createNativeQuery("""
+        WITH ranked_module_scores AS (
+
+            -- Step 1: Get the latest calculated score
+            -- for each module instance
             SELECT
-                cr.competency_rating_id AS category_id,
-                cr.rating_name AS category_name,
-                COUNT(DISTINCT s.employee_id) AS employee_count
+                ms.assessment_module_instance_id,
+                ms.competency_rating_id,
+
+                ROW_NUMBER() OVER (
+                    PARTITION BY ms.assessment_module_instance_id
+                    ORDER BY
+                        ms.calculated_on DESC NULLS LAST,
+                        ms.module_score_id DESC
+                ) AS score_rn
+
+            FROM assessment.module_score ms
+
+            WHERE ms.competency_rating_id IS NOT NULL
+        ),
+
+        ranked_iq_results AS (
+
+            -- Step 2: Get the latest eligible IQ result
+            -- for each employee
+            SELECT
+                s.employee_id,
+                rms.competency_rating_id,
+
+                ROW_NUMBER() OVER (
+                    PARTITION BY s.employee_id
+                    ORDER BY
+                        s.completed_on DESC NULLS LAST,
+                        ami.completed_on DESC NULLS LAST,
+                        rms.assessment_module_instance_id DESC
+                ) AS employee_rn
+
             FROM assessment.assessment_module_instance ami
-            JOIN assessment.assessment_attempt aa
+
+            INNER JOIN assessment.assessment_attempt aa
                 ON aa.assessment_attempt_id =
                    ami.assessment_attempt_id
-            JOIN assessment.assessment_session s
+
+            INNER JOIN assessment.assessment_session s
                 ON s.assessment_session_id =
                    aa.assessment_session_id
-            JOIN assessment.assessment_status ast
+
+            INNER JOIN assessment.assessment_status ast
                 ON ast.assessment_status_id =
                    s.assessment_status_id
-            JOIN master.employee e
+
+            INNER JOIN master.employee e
                 ON e.employee_id = s.employee_id
-            JOIN config.competency_rating cr
-                ON cr.competency_rating_id =
-                   s.competency_rating_id
+
+            INNER JOIN ranked_module_scores rms
+                ON rms.assessment_module_instance_id =
+                   ami.assessment_module_instance_id
+               AND rms.score_rn = 1
+
             WHERE ami.assessment_module_id = :assessmentModuleId
+              AND ami.is_deleted = FALSE
               AND ast.status_code = 'COMPLETED'
               AND s.completed_on IS NOT NULL
-              AND s.competency_rating_id IS NOT NULL
+              AND s.record_status = 'A'
+              AND e.record_status = 'A'
               AND e.organization_id = :organisationId
               AND e.factory_id = :factoryId
-            GROUP BY
-                cr.competency_rating_id,
-                cr.rating_name,
-                cr.display_order
-            ORDER BY
-                cr.display_order NULLS LAST,
-                cr.competency_rating_id
-            """)
+        )
+
+        -- Step 3: Count employees by IQ competency rating
+        SELECT
+            cr.competency_rating_id AS category_id,
+            cr.rating_name AS category_name,
+            COUNT(*) AS employee_count
+
+        FROM ranked_iq_results rir
+
+        INNER JOIN config.competency_rating cr
+            ON cr.competency_rating_id = rir.competency_rating_id
+
+        WHERE rir.employee_rn = 1
+
+        GROUP BY
+            cr.competency_rating_id,
+            cr.rating_name,
+            cr.display_order
+
+        ORDER BY
+            cr.display_order NULLS LAST,
+            cr.competency_rating_id
+        """)
                 .setParameter("assessmentModuleId", assessmentModuleId)
                 .setParameter("organisationId", organisationId)
                 .setParameter("factoryId", factoryId)
@@ -639,40 +886,6 @@ public class DashboardRepositoryImpl implements DashboardRepository {
     }
 
 
-
-    @Override
-    public Long countEmployeesAssessedForTest(
-            Long assessmentModuleId,
-            Long organisationId,
-            Long factoryId) {
-
-        Number result = (Number) entityManager.createNativeQuery("""
-            SELECT COUNT(DISTINCT s.employee_id)
-            FROM assessment.assessment_module_instance ami
-            JOIN assessment.assessment_attempt aa
-                ON aa.assessment_attempt_id =
-                   ami.assessment_attempt_id
-            JOIN assessment.assessment_session s
-                ON s.assessment_session_id =
-                   aa.assessment_session_id
-            JOIN assessment.assessment_status ast
-                ON ast.assessment_status_id =
-                   s.assessment_status_id
-            JOIN master.employee e
-                ON e.employee_id = s.employee_id
-            WHERE ami.assessment_module_id = :assessmentModuleId
-              AND ast.status_code = 'COMPLETED'
-              AND s.completed_on IS NOT NULL
-              AND e.organization_id = :organisationId
-              AND e.factory_id = :factoryId
-            """)
-                .setParameter("assessmentModuleId", assessmentModuleId)
-                .setParameter("organisationId", organisationId)
-                .setParameter("factoryId", factoryId)
-                .getSingleResult();
-
-        return result.longValue();
-    }
 
 
 }

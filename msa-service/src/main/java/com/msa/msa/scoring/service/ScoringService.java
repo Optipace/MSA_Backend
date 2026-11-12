@@ -1,14 +1,7 @@
 package com.msa.msa.scoring.service;
 
-import com.msa.msa.assessment.entity.AssessmentAttempt;
-import com.msa.msa.assessment.entity.AssessmentModule;
-import com.msa.msa.assessment.entity.AssessmentModuleInstance;
-import com.msa.msa.assessment.entity.AssessmentSession;
-import com.msa.msa.assessment.repository.AssessmentAttemptRepository;
-import com.msa.msa.assessment.repository.AssessmentModuleInstanceRepository;
-import com.msa.msa.assessment.repository.AssessmentModuleRepository;
-import com.msa.msa.assessment.repository.AssessmentTemplateRuleRepository;
-import com.msa.msa.assessment.repository.AssessmentSessionRepository;
+import com.msa.msa.assessment.entity.*;
+import com.msa.msa.assessment.repository.*;
 import com.msa.msa.scoring.dto.FinalScoreResponse;
 import com.msa.msa.scoring.entity.CompetencyRating;
 import com.msa.msa.scoring.entity.FinalScore;
@@ -38,7 +31,7 @@ public class ScoringService {
     private final AssessmentModuleInstanceRepository assessmentModuleInstanceRepository;
     private final AssessmentModuleRepository assessmentModuleRepository;
     private final AssessmentTemplateRuleRepository assessmentTemplateRuleRepository;
-
+    private final AssessmentStatusRepository assessmentStatusRepository;
     private final ModuleScoreRepository moduleScoreRepository;
     private final FinalScoreRepository finalScoreRepository;
     private final CompetencyRatingRepository competencyRatingRepository;
@@ -48,20 +41,23 @@ public class ScoringService {
             AssessmentAttemptRepository assessmentAttemptRepository,
             AssessmentModuleInstanceRepository assessmentModuleInstanceRepository,
             AssessmentModuleRepository assessmentModuleRepository,
-            AssessmentTemplateRuleRepository assessmentTemplateRuleRepository,
+            AssessmentTemplateRuleRepository assessmentTemplateRuleRepository, AssessmentStatusRepository assessmentStatusRepository,
             ModuleScoreRepository moduleScoreRepository,
             FinalScoreRepository finalScoreRepository,
             CompetencyRatingRepository competencyRatingRepository
+
     ) {
         this.assessmentSessionRepository = assessmentSessionRepository;
         this.assessmentAttemptRepository = assessmentAttemptRepository;
         this.assessmentModuleInstanceRepository = assessmentModuleInstanceRepository;
         this.assessmentModuleRepository = assessmentModuleRepository;
         this.assessmentTemplateRuleRepository = assessmentTemplateRuleRepository;
+        this.assessmentStatusRepository = assessmentStatusRepository;
         this.moduleScoreRepository = moduleScoreRepository;
         this.finalScoreRepository = finalScoreRepository;
         this.competencyRatingRepository = competencyRatingRepository;
     }
+
 
     @Transactional
     public FinalScoreResponse calculateFinalScore(UUID assessmentSessionId) {
@@ -70,7 +66,8 @@ public class ScoringService {
         AssessmentSession session =
                 assessmentSessionRepository.findById(assessmentSessionId)
                         .orElseThrow(() ->
-                        new AssessmentNotFoundException("Assessment not found"));
+                                new AssessmentNotFoundException("Assessment not found"));
+
         // 2. Get latest attempt
         AssessmentAttempt attempt =
                 assessmentAttemptRepository
@@ -81,8 +78,9 @@ public class ScoringService {
 
         // 3. Get module instances
         List<AssessmentModuleInstance> moduleInstances =
-                assessmentModuleInstanceRepository.findByAssessmentAttemptAssessmentAttemptIdAndIsDeletedFalseOrderBySequenceNo(
-                        attempt.getAssessmentAttemptId());
+                assessmentModuleInstanceRepository
+                        .findByAssessmentAttemptAssessmentAttemptIdAndIsDeletedFalseOrderBySequenceNo(
+                                attempt.getAssessmentAttemptId());
 
         // 4. Read module codes
         Map<String, AssessmentModuleInstance> modules = new HashMap<>();
@@ -103,8 +101,7 @@ public class ScoringService {
         validateCompleted(modules, "IQ");
         validateCompleted(modules, "COLOR1");
         validateCompleted(modules, "COLOR2");
-        validateCompleted(modules, "DEFECT");
-        validateCompleted(modules, "AREA");
+        validateCompleted(modules, "AREA_DEFECT");
 
         // 6. Read module percentages
         BigDecimal iqScore = percentage(modules.get("IQ"));
@@ -118,15 +115,15 @@ public class ScoringService {
                         .add(color2Score)
                         .divide(BigDecimal.valueOf(2), 2, RoundingMode.HALF_UP);
 
-        BigDecimal defectScore = percentage(modules.get("DEFECT"));
-        BigDecimal areaScore = percentage(modules.get("AREA"));
+        // Combined Area and Defect score
+        BigDecimal areaDefectScore =
+                percentage(modules.get("AREA_DEFECT"));
 
         // 7. Save module scores
         saveModuleScore(modules.get("IQ"));
         saveModuleScore(modules.get("COLOR1"));
         saveModuleScore(modules.get("COLOR2"));
-        saveModuleScore(modules.get("DEFECT"));
-        saveModuleScore(modules.get("AREA"));
+        saveModuleScore(modules.get("AREA_DEFECT"));
 
         // 8. Read weightages from DB
         BigDecimal iqWeightage =
@@ -135,33 +132,29 @@ public class ScoringService {
         BigDecimal colorWeightage =
                 getRuleValue(session.getAssessmentTemplateId(), "COLOR_WEIGHTAGE");
 
-        BigDecimal defectWeightage =
-                getRuleValue(session.getAssessmentTemplateId(), "DEFECT_WEIGHTAGE");
-
-        BigDecimal areaWeightage =
-                getRuleValue(session.getAssessmentTemplateId(), "AREA_WEIGHTAGE");
+        BigDecimal areaDefectWeightage =
+                getRuleValue(
+                        session.getAssessmentTemplateId(),
+                        "AREA_DEFECT_WEIGHTAGE");
 
         // 9. Calculate weighted final score
         BigDecimal finalScore =
                 iqScore.multiply(iqWeightage)
                         .add(colorScore.multiply(colorWeightage))
-                        .add(defectScore.multiply(defectWeightage))
-                        .add(areaScore.multiply(areaWeightage))
+                        .add(areaDefectScore.multiply(areaDefectWeightage))
                         .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
 
         // 10. Find competency rating from DB
         CompetencyRating competencyRating =
                 findCompetencyRating(
                         session.getAssessmentTemplateId(),
-                        finalScore
-                );
+                        finalScore);
 
         // 11. Read PASS percentage from DB
         BigDecimal passPercentage =
                 getRuleValue(
                         session.getAssessmentTemplateId(),
-                        "PASS_PERCENTAGE"
-                );
+                        "PASS_PERCENTAGE");
 
         String overallResult =
                 finalScore.compareTo(passPercentage) >= 0
@@ -178,8 +171,7 @@ public class ScoringService {
         finalScoreEntity.setTotalScore(finalScore);
         finalScoreEntity.setPercentage(finalScore);
         finalScoreEntity.setCompetencyRatingId(
-                competencyRating.getCompetencyRatingId()
-        );
+                competencyRating.getCompetencyRatingId());
         finalScoreEntity.setOverallResult(overallResult);
         finalScoreEntity.setCalculatedOn(OffsetDateTime.now());
 
@@ -188,9 +180,15 @@ public class ScoringService {
         // 13. Update assessment session
         session.setTotalScore(finalScore);
         session.setPercentage(finalScore);
+        AssessmentStatus completedStatus =
+                assessmentStatusRepository.findByStatusCode("COMPLETED")
+                        .orElseThrow(() ->
+                                new RuntimeException(
+                                        "COMPLETED assessment status not configured"));
+
+        session.setAssessmentStatus(completedStatus);
         session.setCompetencyRatingId(
-                competencyRating.getCompetencyRatingId()
-        );
+                competencyRating.getCompetencyRatingId());
         session.setCompletedOn(OffsetDateTime.now());
 
         assessmentSessionRepository.save(session);
@@ -208,18 +206,17 @@ public class ScoringService {
                 assessmentSessionId,
                 iqScore,
                 colorScore,
-                defectScore,
-                areaScore,
+                areaDefectScore,
                 iqWeightage,
                 colorWeightage,
-                defectWeightage,
-                areaWeightage,
+                areaDefectWeightage,
                 finalScore,
                 competencyRating.getCompetencyRatingId(),
                 overallResult,
                 "COMPLETED"
         );
     }
+
 
     private void validateCompleted(
             Map<String, AssessmentModuleInstance> modules,

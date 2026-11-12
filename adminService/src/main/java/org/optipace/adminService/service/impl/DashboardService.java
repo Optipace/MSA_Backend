@@ -1,6 +1,7 @@
 package org.optipace.adminService.service.impl;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.optipace.adminService.dto.response.*;
 import org.optipace.adminService.enums.CustomStatus;
 import org.optipace.adminService.repository.AssessmentReportRepository;
@@ -21,6 +22,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class DashboardService {
@@ -80,61 +82,96 @@ public class DashboardService {
     }
 
 
-    public SingleResponse<CompetencyDistributionResponse>
-    getCompetencyDistribution() {
-
-        FactoryScope scope =
-                factoryContextService.getCurrentFactoryScope();
-
-        Long organisationId = scope.organisationId();
-        Long factoryId = scope.factoryId();
+    public SingleResponse<CompetencyDistributionResponse> getCompetencyDistribution() {
 
         try {
+            FactoryScope scope =
+                    factoryContextService.getCurrentFactoryScope();
+
+            Long organisationId = scope.organisationId();
+            Long factoryId = scope.factoryId();
+
+            // Fetch competency distribution for the current factory
             List<CompetencyDistributionProjection> results =
                     dashboardRepository.findCompetencyDistribution(
-                            organisationId, factoryId);
+                            organisationId,
+                            factoryId
+                    );
 
-            Long totalEmployees =
-                    dashboardRepository.countDistinctEmployeesWithCompetencyRating(
-                            organisationId, factoryId);
+            // Handle empty or null results
+            if (results == null || results.isEmpty()) {
 
-            if (totalEmployees == null) {
-                totalEmployees = 0L;
+                CompetencyDistributionResponse response =
+                        new CompetencyDistributionResponse(
+                                0L,
+                                List.of()
+                        );
+
+                return new SingleResponse<>(
+                        response,
+                        CustomStatus.SUCCESS
+                );
             }
 
-            final Long total = totalEmployees;
+            // Calculate total unique employees across all competency ratings
+            long totalEmployees = results.stream()
+                    .mapToLong(row ->
+                            row.getEmployeeCount() == null
+                                    ? 0L
+                                    : row.getEmployeeCount()
+                    )
+                    .sum();
 
+            // Prepare competency distribution response
             List<CompetencyDistributionItemResponse> distribution =
-                    results.stream().map(row -> {
+                    results.stream()
+                            .map(row -> {
 
-                        Long employeeCount =
-                                row.getEmployeeCount() == null
-                                        ? 0L
-                                        : row.getEmployeeCount();
+                                Long employeeCount =
+                                        row.getEmployeeCount() == null
+                                                ? 0L
+                                                : row.getEmployeeCount();
 
-                        double percentage = total > 0
-                                ? Math.round(
-                                employeeCount * 10000.0 / total) / 100.0
-                                : 0.0;
+                                double percentage = totalEmployees > 0
+                                        ? Math.round(
+                                        employeeCount * 10000.0
+                                        / totalEmployees
+                                ) / 100.0
+                                        : 0.0;
 
-                        return new CompetencyDistributionItemResponse(
-                                row.getCompetencyRatingId(),
-                                row.getRatingCode(),
-                                row.getRatingName(),
-                                row.getColorCode(),
-                                employeeCount,
-                                percentage);
-                    }).toList();
+                                return new CompetencyDistributionItemResponse(
+                                        row.getCompetencyRatingId(),
+                                        row.getRatingCode(),
+                                        row.getRatingName(),
+                                        row.getColorCode(),
+                                        employeeCount,
+                                        percentage
+                                );
+                            })
+                            .toList();
 
             CompetencyDistributionResponse response =
                     new CompetencyDistributionResponse(
-                            totalEmployees, distribution);
+                            totalEmployees,
+                            distribution
+                    );
 
-            return new SingleResponse<>(response, CustomStatus.SUCCESS);
+            return new SingleResponse<>(
+                    response,
+                    CustomStatus.SUCCESS
+            );
 
         } catch (Exception e) {
-            // Log the exception using your project's logger if available.
-            return new SingleResponse<>(null, CustomStatus.FAILURE);
+
+            log.error(
+                    "Error while fetching competency distribution",
+                    e
+            );
+
+            return new SingleResponse<>(
+                    null,
+                    CustomStatus.FAILURE
+            );
         }
     }
 
@@ -269,26 +306,30 @@ public class DashboardService {
     public SingleResponse<IqTestDistributionResponse>
     getIqTestDistribution() {
 
-        FactoryScope scope =
-                factoryContextService.getCurrentFactoryScope();
-
-        Long organisationId = scope.organisationId();
-        Long factoryId = scope.factoryId();
-
         try {
-            Long assessmentModuleId = 1L;
+            FactoryScope scope =
+                    factoryContextService.getCurrentFactoryScope();
+
+            Long organisationId = scope.organisationId();
+            Long factoryId = scope.factoryId();
+
+            Long assessmentModuleId = 1L; // IQ module
 
             List<Object[]> results =
                     dashboardRepository.getTestDistribution(
-                            assessmentModuleId, organisationId, factoryId);
+                            assessmentModuleId,
+                            organisationId,
+                            factoryId
+                    );
 
-            Long totalEmployees =
-                    dashboardRepository.countEmployeesAssessedForTest(
-                            assessmentModuleId, organisationId, factoryId);
-
-            if (totalEmployees == null) {
-                totalEmployees = 0L;
-            }
+            // Calculate total unique employees
+            long totalEmployees = results.stream()
+                    .mapToLong(row ->
+                            row[2] == null
+                                    ? 0L
+                                    : ((Number) row[2]).longValue()
+                    )
+                    .sum();
 
             List<IqTestDistributionItemResponse> distribution =
                     new ArrayList<>();
@@ -296,36 +337,52 @@ public class DashboardService {
             for (Object[] row : results) {
 
                 Long categoryId = row[0] == null
-                        ? null : ((Number) row[0]).longValue();
+                        ? null
+                        : ((Number) row[0]).longValue();
 
                 String categoryName = row[1] == null
-                        ? null : row[1].toString();
+                        ? null
+                        : row[1].toString();
 
                 Long employeeCount = row[2] == null
-                        ? 0L : ((Number) row[2]).longValue();
+                        ? 0L
+                        : ((Number) row[2]).longValue();
 
                 double percentage = totalEmployees > 0
                         ? Math.round(
-                        employeeCount * 10000.0 / totalEmployees) / 100.0
+                        employeeCount * 10000.0 / totalEmployees
+                ) / 100.0
                         : 0.0;
 
-                distribution.add(new IqTestDistributionItemResponse(
-                        categoryId,
-                        categoryName,
-                        employeeCount,
-                        percentage));
+                distribution.add(
+                        new IqTestDistributionItemResponse(
+                                categoryId,
+                                categoryName,
+                                employeeCount,
+                                percentage
+                        )
+                );
             }
 
             IqTestDistributionResponse response =
                     new IqTestDistributionResponse(
-                            totalEmployees, distribution);
+                            totalEmployees,
+                            distribution
+                    );
 
             return SingleResponse.success(
-                    response, "IQ Test distribution fetched successfully");
+                    response,
+                    "IQ Test distribution fetched successfully"
+            );
 
         } catch (Exception e) {
-            // Log the exception using your project's logger if available.
-            return new SingleResponse<>(null, CustomStatus.FAILURE);
+
+            e.printStackTrace();
+
+            return new SingleResponse<>(
+                    null,
+                    CustomStatus.FAILURE
+            );
         }
     }
 
@@ -333,27 +390,28 @@ public class DashboardService {
     public SingleResponse<ColourTestDistributionResponse>
     getColourTestDistribution() {
 
-        FactoryScope scope =
-                factoryContextService.getCurrentFactoryScope();
-
-        Long organisationId = scope.organisationId();
-        Long factoryId = scope.factoryId();
-
         try {
-            // Confirm that 2L is the correct Colour Test module ID.
+            FactoryScope scope =
+                    factoryContextService.getCurrentFactoryScope();
+
+            Long organisationId = scope.organisationId();
+            Long factoryId = scope.factoryId();
+
+            // COLOR1 module ID
             Long assessmentModuleId = 2L;
 
             List<Object[]> results =
                     dashboardRepository.getTestDistribution(
-                            assessmentModuleId, organisationId, factoryId);
+                            assessmentModuleId,
+                            organisationId,
+                            factoryId
+                    );
 
-            Long totalEmployees =
-                    dashboardRepository.countEmployeesAssessedForTest(
-                            assessmentModuleId, organisationId, factoryId);
-
-            if (totalEmployees == null) {
-                totalEmployees = 0L;
-            }
+            long totalEmployees = results.stream()
+                    .mapToLong(row -> row[2] == null
+                            ? 0L
+                            : ((Number) row[2]).longValue())
+                    .sum();
 
             List<ColourTestDistributionItemResponse> distribution =
                     new ArrayList<>();
@@ -361,37 +419,50 @@ public class DashboardService {
             for (Object[] row : results) {
 
                 Long categoryId = row[0] == null
-                        ? null : ((Number) row[0]).longValue();
+                        ? null
+                        : ((Number) row[0]).longValue();
 
                 String categoryName = row[1] == null
-                        ? null : row[1].toString();
+                        ? null
+                        : row[1].toString();
 
                 Long employeeCount = row[2] == null
-                        ? 0L : ((Number) row[2]).longValue();
+                        ? 0L
+                        : ((Number) row[2]).longValue();
 
                 double percentage = totalEmployees > 0
                         ? Math.round(
-                        employeeCount * 10000.0 / totalEmployees) / 100.0
+                        employeeCount * 10000.0 / totalEmployees
+                ) / 100.0
                         : 0.0;
 
-                distribution.add(new ColourTestDistributionItemResponse(
-                        categoryId,
-                        categoryName,
-                        employeeCount,
-                        percentage));
+                distribution.add(
+                        new ColourTestDistributionItemResponse(
+                                categoryId,
+                                categoryName,
+                                employeeCount,
+                                percentage
+                        )
+                );
             }
 
             ColourTestDistributionResponse response =
                     new ColourTestDistributionResponse(
-                            totalEmployees, distribution);
+                            totalEmployees,
+                            distribution
+                    );
 
             return SingleResponse.success(
                     response,
-                    "Colour Test distribution fetched successfully");
+                    "Colour Test distribution fetched successfully"
+            );
 
         } catch (Exception e) {
-            // Log the exception using your project's logger if available.
-            return new SingleResponse<>(null, CustomStatus.FAILURE);
+            e.printStackTrace();
+            return new SingleResponse<>(
+                    null,
+                    CustomStatus.FAILURE
+            );
         }
     }
 

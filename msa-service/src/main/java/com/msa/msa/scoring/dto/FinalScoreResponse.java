@@ -1,3 +1,4 @@
+
 package com.msa.msa.scoring.dto;
 
 import lombok.AllArgsConstructor;
@@ -14,13 +15,11 @@ public class FinalScoreResponse {
 
     private BigDecimal iqScore;
     private BigDecimal colorScore;
-    private BigDecimal defectScore;
-    private BigDecimal areaScore;
+    private BigDecimal areaDefectScore;
 
     private BigDecimal iqWeightage;
     private BigDecimal colorWeightage;
-    private BigDecimal defectWeightage;
-    private BigDecimal areaWeightage;
+    private BigDecimal areaDefectWeightage;
 
     private BigDecimal finalScore;
 
