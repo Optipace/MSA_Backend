@@ -1029,10 +1029,13 @@ public class AssessmentService {
                     "AREA_DEFECT module instance was not found in original attempt");
         }
 
-        // 14. Soft-delete only the original AREA_DEFECT instance
+        // 14. Soft-delete the original AREA_DEFECT module instance
         oldInstance.setIsDeleted(true);
-
         assessmentModuleInstanceRepository.save(oldInstance);
+
+        // Mark the old assessment session as deleted
+        oldSession.setRecordStatus("D");
+        assessmentSessionRepository.save(oldSession);
 
         // 15. Return response using your EXISTING response DTO
         return new RetestAreaDefectResponse(

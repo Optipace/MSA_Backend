@@ -67,6 +67,98 @@ public class ColorTest1Service {
      * This method only reads the COLOR1 timer configuration
      * and returns it to the frontend.
      */
+//    @Transactional
+//    public ColorTest1StartResponse startColorTest1(
+//            UUID assessmentSessionId,
+//            UUID assessmentModuleInstanceId) {
+//
+//        // 1. Find module instance and verify ownership
+//        AssessmentModuleInstance moduleInstance =
+//                assessmentModuleInstanceRepository
+//                        .findByAssessmentModuleInstanceIdAndAssessmentAttemptAssessmentSessionAssessmentSessionId(
+//                                assessmentModuleInstanceId,
+//                                assessmentSessionId
+//                        )
+//                        .orElseThrow(() ->
+//                                new BadRequestException(
+//                                        "Assessment module does not belong to this assessment"
+//                                )
+//                        );
+//
+//        // 2. Get module configuration
+//        AssessmentModule module =
+//                assessmentModuleRepository
+//                        .findById(moduleInstance.getAssessmentModuleId())
+//                        .orElseThrow(() ->
+//                                new BadRequestException(
+//                                        "Assessment module configuration not found"
+//                                )
+//                        );
+//
+//        // 3. Verify this is COLOR1
+//        if (!COLOR1_MODULE_CODE.equals(module.getModuleCode())) {
+//            throw new BadRequestException(
+//                    "This assessment module is not Color Test 1"
+//            );
+//        }
+//
+//        // 4. COLOR1 must already be IN_PROGRESS.
+//        // The existing AssessmentService.startModule()
+//        // is responsible for making it IN_PROGRESS.
+//        if (!"IN_PROGRESS".equals(
+//                moduleInstance.getModuleStatus().getStatusCode())) {
+//
+//            throw new BadRequestException(
+//                    "Color Test 1 must be started before requesting its configuration"
+//            );
+//        }
+//
+//        // 5. Get assessment session
+//        AssessmentSession session =
+//                moduleInstance.getAssessmentAttempt()
+//                        .getAssessmentSession();
+//
+//        // 6. Read COLOR1 timer configuration
+//        AssessmentTemplateRule timeRule =
+//                assessmentTemplateRuleRepository
+//                        .findByAssessmentTemplateIdAndRuleName(
+//                                session.getAssessmentTemplateId(),
+//                                TIME_LIMIT_RULE
+//                        )
+//                        .orElseThrow(() ->
+//                                new BadRequestException(
+//                                        "Color Test 1 time limit is not configured"
+//                                )
+//                        );
+//
+//        int timeLimitSeconds;
+//
+//        try {
+//            timeLimitSeconds =
+//                    Integer.parseInt(timeRule.getRuleValue());
+//        } catch (NumberFormatException e) {
+//            throw new BadRequestException(
+//                    "Invalid Color Test 1 time limit configuration"
+//            );
+//        }
+//
+//        if (timeLimitSeconds <= 0) {
+//            throw new BadRequestException(
+//                    "Color Test 1 time limit must be greater than zero"
+//            );
+//        }
+//
+//        // 7. Return timer configuration
+//        return new ColorTest1StartResponse(
+//                moduleInstance.getAssessmentModuleInstanceId(),
+//                module.getModuleCode(),
+//                module.getModuleName(),
+//                moduleInstance.getModuleStatus().getStatusCode(),
+//                moduleInstance.getStartedOn(),
+//                timeLimitSeconds
+//        );
+//    }
+
     @Transactional
     public ColorTest1StartResponse startColorTest1(
             UUID assessmentSessionId,
@@ -102,9 +194,7 @@ public class ColorTest1Service {
             );
         }
 
-        // 4. COLOR1 must already be IN_PROGRESS.
-        // The existing AssessmentService.startModule()
-        // is responsible for making it IN_PROGRESS.
+        // 4. COLOR1 must already be IN_PROGRESS
         if (!"IN_PROGRESS".equals(
                 moduleInstance.getModuleStatus().getStatusCode())) {
 
@@ -113,42 +203,16 @@ public class ColorTest1Service {
             );
         }
 
-        // 5. Get assessment session
-        AssessmentSession session =
-                moduleInstance.getAssessmentAttempt()
-                        .getAssessmentSession();
+        // 6. Read COLOR1 timer configuration from assessment_module table
+        Integer timeLimitSeconds = module.getDurationMinutes();
 
-        // 6. Read COLOR1 timer configuration
-        AssessmentTemplateRule timeRule =
-                assessmentTemplateRuleRepository
-                        .findByAssessmentTemplateIdAndRuleName(
-                                session.getAssessmentTemplateId(),
-                                TIME_LIMIT_RULE
-                        )
-                        .orElseThrow(() ->
-                                new BadRequestException(
-                                        "Color Test 1 time limit is not configured"
-                                )
-                        );
-
-        int timeLimitSeconds;
-
-        try {
-            timeLimitSeconds =
-                    Integer.parseInt(timeRule.getRuleValue());
-        } catch (NumberFormatException e) {
+        if (timeLimitSeconds == null || timeLimitSeconds <= 0) {
             throw new BadRequestException(
-                    "Invalid Color Test 1 time limit configuration"
+                    "Color Test 1 time limit is not configured"
             );
         }
 
-        if (timeLimitSeconds <= 0) {
-            throw new BadRequestException(
-                    "Color Test 1 time limit must be greater than zero"
-            );
-        }
-
-        // 7. Return timer configuration
+        // 6. Return timer configuration
         return new ColorTest1StartResponse(
                 moduleInstance.getAssessmentModuleInstanceId(),
                 module.getModuleCode(),

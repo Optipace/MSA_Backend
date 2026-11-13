@@ -70,6 +70,9 @@ public class ColorTest2Service {
      * This method only reads the COLOR2 timer configuration
      * and returns it to the frontend.
      */
+//
+
+
     @Transactional
     public ColorTest2StartResponse startColorTest2(
             UUID assessmentSessionId,
@@ -100,15 +103,12 @@ public class ColorTest2Service {
 
         // 3. Verify this is COLOR2
         if (!COLOR2_MODULE_CODE.equals(module.getModuleCode())) {
-
             throw new BadRequestException(
                     "This assessment module is not Color Test 2"
             );
         }
 
-        // 4. COLOR2 must already be IN_PROGRESS.
-        // The existing AssessmentService.startModule()
-        // is responsible for making it IN_PROGRESS.
+        // 4. COLOR2 must already be IN_PROGRESS
         if (!"IN_PROGRESS".equals(
                 moduleInstance.getModuleStatus().getStatusCode())) {
 
@@ -117,46 +117,16 @@ public class ColorTest2Service {
             );
         }
 
-        // 5. Get assessment session
-        AssessmentSession session =
-                moduleInstance.getAssessmentAttempt()
-                        .getAssessmentSession();
+        // Read duration directly in seconds
+        Integer timeLimitSeconds = module.getDurationMinutes();
 
-        // 6. Read COLOR2 timer configuration
-        AssessmentTemplateRule timeRule =
-                assessmentTemplateRuleRepository
-                        .findByAssessmentTemplateIdAndRuleName(
-                                session.getAssessmentTemplateId(),
-                                TIME_LIMIT_RULE
-                        )
-                        .orElseThrow(() ->
-                                new BadRequestException(
-                                        "Color Test 2 time limit is not configured"
-                                )
-                        );
-
-        int timeLimitSeconds;
-
-        try {
-
-            timeLimitSeconds =
-                    Integer.parseInt(timeRule.getRuleValue());
-
-        } catch (NumberFormatException e) {
-
+        if (timeLimitSeconds == null || timeLimitSeconds <= 0) {
             throw new BadRequestException(
-                    "Invalid Color Test 2 time limit configuration"
+                    "Color Test 2 time limit is not configured"
             );
         }
 
-        if (timeLimitSeconds <= 0) {
-
-            throw new BadRequestException(
-                    "Color Test 2 time limit must be greater than zero"
-            );
-        }
-
-        // 7. Return timer configuration
+        // 6. Return timer configuration
         return new ColorTest2StartResponse(
                 moduleInstance.getAssessmentModuleInstanceId(),
                 module.getModuleCode(),
@@ -166,6 +136,7 @@ public class ColorTest2Service {
                 timeLimitSeconds
         );
     }
+
 
     /**
      * Submit Color Test 2 result.
